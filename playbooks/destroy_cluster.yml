@@ -1,0 +1,7 @@
+---
+
+- hosts: localhost
+  tasks:
+    - import_role:
+        name: infrastructure
+        tasks_from: aws_destroy

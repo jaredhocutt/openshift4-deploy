@@ -1,0 +1,15 @@
+---
+
+- hosts: localhost
+  tasks:
+    - import_role:
+        name: infrastructure
+        tasks_from: aws_create
+
+- hosts: bastion
+  tasks:
+    - import_role:
+        name: host_prep
+        tasks_from: bastion
+    - import_role:
+        name: openshift_install

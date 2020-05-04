@@ -1,0 +1,49 @@
+---
+# tasks file for openshift_install
+
+- name: Create OpenShift installation directory
+  file:
+    path: "{{ openshift_install_dir }}"
+    owner: "{{ ansible_user_uid }}"
+    group: "{{ ansible_user_gid }}"
+    mode: 0755
+    state: directory
+
+- name: Create OpenShift install-config.yaml
+  template:
+    src: install-config.yaml.j2
+    dest: "{{ openshift_install_dir }}/install-config.yaml"
+    owner: "{{ ansible_user_uid }}"
+    group: "{{ ansible_user_gid }}"
+    mode: 0644
+
+- name: Generate OpenShift manifests
+  command: openshift-install create manifests
+  args:
+    chdir: "{{ openshift_install_dir }}"
+
+- name: Mark masters as not scheduleable
+  lineinfile:
+    path: "{{ openshift_install_dir }}/manifests/cluster-scheduler-02-config.yml"
+    regexp: '^(\s*mastersSchedulable:)'
+    line: '\1 false'
+    backrefs: yes
+
+- name: Generate OpenShift ignition configs
+  command: openshift-install create ignition-configs
+  args:
+    chdir: "{{ openshift_install_dir }}"
+
+- name: Copy OpenShift ignition configs to httpd
+  copy:
+    src: "{{ openshift_install_dir }}/{{ item }}.ign"
+    dest: /var/www/html
+    owner: root
+    group: root
+    mode: 0644
+    remote_src: yes
+  become: yes
+  loop:
+    - bootstrap
+    - master
+    - worker

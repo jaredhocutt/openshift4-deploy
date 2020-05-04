@@ -1,0 +1,90 @@
+---
+
+- name: Copy SSH key
+  copy:
+    src: "{{ keypair_path }}"
+    dest: ~/.ssh/id_rsa
+    owner: "{{ ansible_user_uid }}"
+    group: "{{ ansible_user_gid }}"
+    mode: 0600
+
+- name: Add additional authorized keys
+  authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ item }}"
+    state: present
+  loop: "{{ additional_authorized_keys }}"
+
+- name: Install required packages
+  yum:
+    name:
+      - bind-utils
+      - git
+      - httpd
+      - screen
+      - unzip
+      - vim
+      - wget
+    state: present
+  become: yes
+
+- name: Check for OpenShift installer
+  stat:
+    path: /usr/local/bin/openshift-install
+  register: r_check_openshift_installer
+
+- name: Create temporary download directory
+  tempfile:
+    state: directory
+  register: r_create_temp_download_dir
+  when: not r_check_openshift_installer.stat.exists
+
+- name: Install OpenShift installer and client
+  block:
+    - name: Download and unarchive OpenShift installer
+      unarchive:
+        src: http://mirror.openshift.com/pub/openshift-v4/clients/ocp/{{ openshift_version }}/openshift-install-linux-{{ openshift_version }}.tar.gz
+        dest: "{{ r_create_temp_download_dir.path }}"
+        remote_src: yes
+
+    - name: Copy OpenShift installer binary
+      copy:
+        src: "{{ r_create_temp_download_dir.path }}/openshift-install"
+        dest: /usr/local/bin
+        remote_src: yes
+        owner: root
+        group: root
+        mode: 0755
+      become: yes
+
+    - name: Download and unarchive OpenShift client
+      unarchive:
+        src: http://mirror.openshift.com/pub/openshift-v4/clients/ocp/{{ openshift_version }}/openshift-client-linux-{{ openshift_version }}.tar.gz
+        dest: "{{ r_create_temp_download_dir.path }}"
+        remote_src: yes
+
+    - name: Copy OpenShift client binaries
+      copy:
+        src: "{{ r_create_temp_download_dir.path }}/{{ item }}"
+        dest: /usr/local/bin
+        remote_src: yes
+        owner: root
+        group: root
+        mode: 0755
+      become: yes
+      loop:
+        - oc
+        - kubectl
+  always:
+    - name: Cleanup temporary download directory
+      file:
+        path: "{{ r_create_temp_download_dir.path }}"
+        state: absent
+  when: not r_check_openshift_installer.stat.exists
+
+- name: Start and enable httpd
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+  become: yes

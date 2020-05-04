@@ -1,0 +1,4 @@
+---
+# defaults file for openshift_install
+
+openshift_install_dir: "{{ ansible_user_dir }}/ocp4"

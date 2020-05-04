@@ -1,0 +1,4 @@
+---
+# defaults file for infrastructure
+
+terraform_workspace: "openshift-deploy-{{ cluster_name }}-{{ base_domain | replace('.', '-') }}"

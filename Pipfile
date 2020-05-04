@@ -1,0 +1,16 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+aws-shell = "*"
+
+[packages]
+ansible = ">=2.9,<2.10"
+boto = "*"
+boto3 = "*"
+botocore = "*"
+
+[requires]
+python_version = "3"
