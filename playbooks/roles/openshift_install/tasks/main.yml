@@ -106,5 +106,8 @@
       !!!                           Action Items                            !!!
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+      There are currently some features that have yet to be implemented in this
+      automation, so they require some manual actions on your part.
 
-
+      1) The bootstrap node is no longer needed. Log into the AWS console (or
+      use the CLI) to shut it down or remove it.
