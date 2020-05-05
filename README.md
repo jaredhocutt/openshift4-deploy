@@ -1,6 +1,6 @@
 # OpenShift 4 Deploy
 
-Deploy OpenShift 4 following platforms:
+Deploy OpenShift 4 on the following platforms:
 
 - AWS
 
