@@ -137,6 +137,9 @@ Log into the AWS console and create a public Route53 hosted zone for your
 cluster. The name **must** match the format `{{ cluster_name }}.{{ base_domain }}`
 using the values you specified for those in your variable file.
 
+For example, if `cluster_name` is `ocp4` and `base_domain` is `example.com`,
+then your hosted zone should be `ocp4.example.com`.
+
 Be sure to create `NS` records on the base domain to point to your new hosted
 zone. You can grab the values for the `NS` record by viewing your hosted zone.
 
