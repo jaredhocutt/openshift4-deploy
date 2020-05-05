@@ -1,0 +1,15 @@
+---
+
+cloud: aws
+
+openshift_version: 4.3.18
+
+cluster_name: ocp4
+base_domain: example.com
+
+# TODO: add a comment describing each variable
+rhcos_ami: ami-123456789
+keypair_name: mykeypair
+keypair_path: ~/.ssh/mykeypair.pem
+
+pull_secret: ''
