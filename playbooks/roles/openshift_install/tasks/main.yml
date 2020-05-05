@@ -68,8 +68,7 @@
   args:
     chdir: "{{ openshift_install_dir }}"
   async: 3600  # 60 minutes (30 min for api and 30 min for bootstrap)
-  poll: 2
-  #poll: 30
+  poll: 30
 
 # TODO: Shut down bootstrap machine
 
@@ -78,8 +77,7 @@
   args:
     chdir: "{{ openshift_install_dir }}"
   async: 2400  # 40 minutes (30 min for cluster and 10 min for console)
-  poll: 2
-  #poll: 30
+  poll: 30
 
 - name: Output cluster information
   debug:
