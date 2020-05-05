@@ -1,12 +1,15 @@
 ---
 
-- name: Copy SSH key
-  copy:
-    src: "{{ keypair_path }}"
-    dest: ~/.ssh/id_rsa
-    owner: "{{ ansible_user_uid }}"
-    group: "{{ ansible_user_gid }}"
-    mode: 0600
+- block:
+    - name: Create SSH keys
+      openssh_keypair:
+        path: ~/.ssh/id_rsa
+      register: r_host_prep_create_ssh_keys
+
+    - name: Set the SSH public key fact
+      set_fact:
+        ssh_public_key: "{{ r_host_prep_create_ssh_keys.public_key | trim }}"
+  when: ssh_public_key is undefined
 
 - name: Add additional authorized keys
   authorized_key:
@@ -14,6 +17,25 @@
     key: "{{ item }}"
     state: present
   loop: "{{ additional_authorized_keys }}"
+
+- name: Create MOTD
+  template:
+    src: bastion_motd.j2
+    dest: /etc/motd
+  become: yes
+
+- name: Add OpenShift nodes to hosts file
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      {{ terraform_outputs.bootstrap.value.private_ip }}  bootstrap
+      {% for master in terraform_outputs.masters.value %}
+      {{ master.private_ip }}  master{{ loop.index0 }}
+      {% endfor %}
+      {%- for worker in terraform_outputs.workers.value %}
+      {{ worker.private_ip }}  worker{{ loop.index0 }}
+      {% endfor %}
+  become: yes
 
 - name: Install required packages
   yum:

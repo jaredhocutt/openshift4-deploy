@@ -2,14 +2,29 @@
 
 - hosts: localhost
   tasks:
+    - name: Check if a supported cloud has been specified
+      fail:
+        msg: |-
+          You must specify a cloud from the options below:
+
+            - aws
+      when: cloud not in ['aws']
+
+- hosts: localhost
+  tasks:
     - import_role:
         name: infrastructure
         tasks_from: aws_create
+      tags: [infrastructure]
+      when: cloud == 'aws'
 
 - hosts: bastion
   tasks:
     - import_role:
         name: host_prep
         tasks_from: bastion
+      tags: [prep]
+
     - import_role:
         name: openshift_install
+      tags: [install]

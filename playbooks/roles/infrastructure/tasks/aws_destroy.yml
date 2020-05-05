@@ -7,6 +7,8 @@
     variables:
       cluster_name: "{{ cluster_name }}"
       base_domain: "{{ base_domain }}"
+      cluster_domain: "{{ cluster_domain }}"
+      cluster_id: "{{ cluster_id }}"
       vpc_cidr: "{{ vpc_cidr | default(omit) }}"
       rhcos_ami: "{{ rhcos_ami }}"
       keypair_name: "{{ keypair_name }}"

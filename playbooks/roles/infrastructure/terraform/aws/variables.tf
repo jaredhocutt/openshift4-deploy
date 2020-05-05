@@ -6,6 +6,14 @@ variable "base_domain" {
   type = string
 }
 
+variable "cluster_domain" {
+  type = string
+}
+
+variable "cluster_id" {
+  type = string
+}
+
 variable "vpc_cidr" {
   type    = string
   default = "172.31.0.0/16"

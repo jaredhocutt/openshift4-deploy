@@ -9,3 +9,7 @@ output "bootstrap" {
 output "masters" {
   value = [for i in aws_instance.masters : i]
 }
+
+output "workers" {
+  value = [for i in aws_instance.workers : i]
+}

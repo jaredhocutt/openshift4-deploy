@@ -2,3 +2,6 @@
 # defaults file for infrastructure
 
 terraform_workspace: "openshift-deploy-{{ cluster_name }}-{{ base_domain | replace('.', '-') }}"
+
+cluster_id: "{{ cluster_name }}-{{ base_domain | hash('sha256') | regex_replace('^(\\w{5}).*', '\\1') }}"
+cluster_domain: "{{ cluster_name }}.{{ base_domain }}"
