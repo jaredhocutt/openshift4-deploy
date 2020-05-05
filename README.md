@@ -95,6 +95,23 @@ saved the private key file as you will need them in the next step.
 
 #### Step 4
 
+There are several variables that you will need to define before running the
+deployment that are specific to your environment.
+
+| Variable            | Required           | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------- | ------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base_domain`       | :heavy_check_mark: |         | The base domain of the cluster.<br><br>All DNS will be sub-domains of this base and include the `cluster_name`.                                                                                                                                                                                                                                                                                                                        |
+| `cloud`             | :heavy_check_mark: |         | The cloud provider to deploy to.<br><br>You should set this to `aws` to deploy to AWS.                                                                                                                                                                                                                                                                                                                                                 |
+| `cluster_name`      | :heavy_check_mark: |         | The cluster name.<br><br>This value will be in your DNS entries and should conform to valid DNS characters.                                                                                                                                                                                                                                                                                                                            |
+| `keypair_name`      | :heavy_check_mark: |         | The name of the AWS key pair to use for the bastion host.                                                                                                                                                                                                                                                                                                                                                                              |
+| `keypair_path`      | :heavy_check_mark: |         | The path to the private key for your AWS key pair.<br><br>Note: The private key's integrity will be maintained. It is only used by Ansible to connect to the bastion host.                                                                                                                                                                                                                                                             |
+| `openshift_version` | :heavy_check_mark: |         | The OpenShift version to install.                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `pull_secret`       | :heavy_check_mark: |         | The content of your pull secret, which can be found [here][pull_secret]. Be sure to wrap its value in single quotes.                                                                                                                                                                                                                                                                                                                   |
+| `rhcos_ami`         | :heavy_check_mark: |         | The AMI ID for RHCOS.<br><br>If you are deploying into a commercial AWS region, the AMI ID can be found [here][rhcos_ami_ids]. Be sure to the documentation you are looking at matches the version of OpenShift you are deploying to get the correct AMI IDs.<br><br>If you are deploying in AWS GovCloud, you will need to upload the RHCOS image and create your own AMI. After doing so, you can use that AMI ID for this variable. |
+
+[pull_secret]: https://cloud.redhat.com/openshift/install/pull-secret
+[rhcos_ami_ids]: https://docs.openshift.com/container-platform/latest/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
+
 Create a variable file at `<openshift4-deploy>/vars/ocp4.yml`.
 
 ```yaml
@@ -114,23 +131,6 @@ keypair_path: ~/.ssh/mykeypair.pem
 pull_secret: ''
 ```
 
-Edit the variable file to contain the information specific to your
-environment.
-
-| Variable            | Required           | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------- | ------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `base_domain`       | :heavy_check_mark: |         | The base domain of the cluster.<br><br>All DNS will be sub-domains of this base and include the `cluster_name`.                                                                                                                                                                                                                                                                                                                        |
-| `cloud`             | :heavy_check_mark: |         | The cloud provider to deploy to.<br><br>You should set this to `aws` to deploy to AWS.                                                                                                                                                                                                                                                                                                                                                 |
-| `cluster_name`      | :heavy_check_mark: |         | The cluster name.<br><br>This value will be in your DNS entries and should conform to valid DNS characters.                                                                                                                                                                                                                                                                                                                            |
-| `keypair_name`      | :heavy_check_mark: |         | The name of the AWS key pair to use for the bastion host.                                                                                                                                                                                                                                                                                                                                                                              |
-| `keypair_path`      | :heavy_check_mark: |         | The path to the private key for your AWS key pair.<br><br>Note: The private key's integrity will be maintained. It is only used by Ansible to connect to the bastion host.                                                                                                                                                                                                                                                             |
-| `openshift_version` | :heavy_check_mark: |         | The OpenShift version to install.                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `pull_secret`       | :heavy_check_mark: |         | The content of your pull secret, which can be found [here][pull_secret]. Be sure to wrap its value in single quotes.                                                                                                                                                                                                                                                                                                                   |
-| `rhcos_ami`         | :heavy_check_mark: |         | The AMI ID for RHCOS.<br><br>If you are deploying into a commercial AWS region, the AMI ID can be found [here][rhcos_ami_ids]. Be sure to the documentation you are looking at matches the version of OpenShift you are deploying to get the correct AMI IDs.<br><br>If you are deploying in AWS GovCloud, you will need to upload the RHCOS image and create your own AMI. After doing so, you can use that AMI ID for this variable. |
-
-[pull_secret]: https://cloud.redhat.com/openshift/install/pull-secret
-[rhcos_ami_ids]: https://docs.openshift.com/container-platform/latest/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
-
 #### Step 5
 
 Log into the AWS console and create a public Route53 hosted zone for your
@@ -145,7 +145,7 @@ zone. You can grab the values for the `NS` record by viewing your hosted zone.
 
 ![Route53 NS Record](docs/images/route53_ns.png)
 
-#### Step 5
+#### Step 6
 
 Execute the automation while passing in your variable file.
 
