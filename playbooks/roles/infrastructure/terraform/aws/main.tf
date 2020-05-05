@@ -28,8 +28,6 @@ data "aws_ami" "rhel7" {
   }
 }
 
-data "aws_caller_identity" "current" {}
-
 ###############################################################################
 # Locals
 ###############################################################################
@@ -37,14 +35,12 @@ data "aws_caller_identity" "current" {}
 locals {
   kubernetes_cluster_shared_tag = map(
     "kubernetes.io/cluster/${var.cluster_id}", "shared",
-    "OpenShiftCluster", var.cluster_domain,
-    "OpenShiftCreatedBy", data.aws_caller_identity.user_id
+    "OpenShiftCluster", var.cluster_domain
   )
 
   kubernetes_cluster_owned_tag = map(
     "kubernetes.io/cluster/${var.cluster_id}", "owned",
-    "OpenShiftCluster", var.cluster_domain,
-    "OpenShiftCreatedBy", data.aws_caller_identity.user_id
+    "OpenShiftCluster", var.cluster_domain
   )
 
   public_subnets = [

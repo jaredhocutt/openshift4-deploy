@@ -10,6 +10,8 @@ This project uses the **bare metal** method of installation on all platforms
 listed above. This translates to there being **NO** integration with the underlying
 infrastructure provider.
 
+**TODO: Describe what you're giving up**
+
 If you would like a cluster that provides integration with the underlying
 infrastructure provider, please see the built-in installation methods provided
 with the OpenShift installer:
