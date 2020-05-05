@@ -19,7 +19,7 @@
 - name: Add bastion to inventory
   add_host:
     name: bastion
-    ansible_host: "{{ r_terraform_apply.outputs.bastion.value.public_ip }}"
+    ansible_host: "{{ r_terraform_apply.outputs.bastion_eip.value }}"
     ansible_user: ec2-user
     ansible_ssh_private_key_file: "{{ keypair_path }}"
     terraform_outputs: "{{ r_terraform_apply.outputs }}"

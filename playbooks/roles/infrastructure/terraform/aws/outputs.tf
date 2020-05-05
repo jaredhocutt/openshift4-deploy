@@ -13,3 +13,7 @@ output "masters" {
 output "workers" {
   value = [for i in aws_instance.workers : i]
 }
+
+output "bastion_eip" {
+  value = aws_eip.bastion
+}
