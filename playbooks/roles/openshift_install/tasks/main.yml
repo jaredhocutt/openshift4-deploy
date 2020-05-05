@@ -60,7 +60,7 @@
 
 - name: Capture kubeadmin password
   slurp:
-    src: "{{ openshift_install_dir }}/auth/kubeadmin_password"
+    src: "{{ openshift_install_dir }}/auth/kubeadmin-password"
   register: r_capture_kubeadmin_password
 
 - name: Wait for OpenShift bootstrap to complete
