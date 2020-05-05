@@ -6,8 +6,8 @@ Deploy OpenShift 4 on the following platforms:
 
 **IMPORTANT**
 
-This project uses the "bare metal" method of installation on all platforms
-listed above. This translates to there being NO integration with the underlying
+This project uses the **bare metal** method of installation on all platforms
+listed above. This translates to there being **NO** integration with the underlying
 infrastructure provider.
 
 If you would like a cluster that provides integration with the underlying
@@ -81,19 +81,19 @@ export AWS_REGION=us-east-1
 
 #### Step 3
 
-If you already have an AWS key pair that you would like to use, you can skip
-this step.
+*If you already have an AWS key pair that you would like to use, you can skip
+this step.*
 
 If you do not have an AWS key pair or would like to create one specific to this
 environment, log into the AWS console and create one in the region where you
 will be deploying OpenShift 4.
 
-Be sure to remember the name of the key pair and the location where you saved
-the private key file as you will need them in the next step.
+Be sure to remember the **name** of the key pair and the **path** where you
+saved the private key file as you will need them in the next step.
 
 #### Step 4
 
-Create a variables file at `<openshift4-deploy>/vars/ocp4.yml`.
+Create a variable file at `<openshift4-deploy>/vars/ocp4.yml`.
 
 ```yaml
 ---
@@ -112,7 +112,7 @@ keypair_path: ~/.ssh/mykeypair.pem
 pull_secret: ''
 ```
 
-Edit the variables file to contain the information specific to your
+Edit the variable file to contain the information specific to your
 environment.
 
 | Variable            | Required           | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -133,7 +133,7 @@ environment.
 
 Log into the AWS console and create a public Route53 hosted zone for your
 cluster. The name **must** match the format `{{ cluster_name }}.{{ base_domain }}`
-using the values you specified for those in your variables file.
+using the values you specified for those in your variable file.
 
 Be sure to create `NS` records on the base domain to point to your new hosted
 zone. You can grab the values for the `NS` record by viewing your hosted zone.
@@ -142,7 +142,7 @@ zone. You can grab the values for the `NS` record by viewing your hosted zone.
 
 #### Step 5
 
-Execute the automation while passing in your variables file.
+Execute the automation while passing in your variable file.
 
 ```bash
 ansible-playbook -e @vars/ocp4.yml playbooks/create_cluster.yml -v
