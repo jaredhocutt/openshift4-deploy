@@ -1,0 +1,4 @@
+---
+# vars file for openshift_install
+
+p_all_worker_nodes_ready: no

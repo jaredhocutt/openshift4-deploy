@@ -1,0 +1,19 @@
+---
+
+- hosts: localhost
+  tasks:
+    - name: Check if a supported cloud has been specified
+      fail:
+        msg: |-
+          You must specify a cloud from the options below:
+
+            - aws
+      when: cloud not in ['aws']
+
+- hosts: localhost
+  tasks:
+    - import_role:
+        name: infrastructure
+        tasks_from: aws_destroy
+      tags: [infrastructure]
+      when: cloud == 'aws'

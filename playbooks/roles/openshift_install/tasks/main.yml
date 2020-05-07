@@ -1,0 +1,115 @@
+---
+# tasks file for openshift_install
+
+- name: Check for ignition files
+  stat:
+    path: "{{ openshift_install_dir }}/bootstrap.ign"
+  register: r_stat_ignition_files
+
+- block:
+    - name: Create OpenShift installation directory
+      file:
+        path: "{{ openshift_install_dir }}"
+        owner: "{{ ansible_user_uid }}"
+        group: "{{ ansible_user_gid }}"
+        mode: 0755
+        state: directory
+
+    - name: Create OpenShift install-config.yaml
+      template:
+        src: install-config.yaml.j2
+        dest: "{{ openshift_install_dir }}/{{ item }}"
+        owner: "{{ ansible_user_uid }}"
+        group: "{{ ansible_user_gid }}"
+        mode: 0644
+      loop:
+        - install-config.yaml
+        - install-config.backup.yaml
+
+    - name: Generate OpenShift manifests
+      command: openshift-install create manifests
+      args:
+        chdir: "{{ openshift_install_dir }}"
+
+    - name: Mark masters as not scheduleable
+      lineinfile:
+        path: "{{ openshift_install_dir }}/manifests/cluster-scheduler-02-config.yml"
+        regexp: '^(\s*mastersSchedulable:)'
+        line: '\1 false'
+        backrefs: yes
+
+    - name: Generate OpenShift ignition configs
+      command: openshift-install create ignition-configs
+      args:
+        chdir: "{{ openshift_install_dir }}"
+
+    - name: Copy OpenShift ignition configs to httpd
+      copy:
+        src: "{{ openshift_install_dir }}/{{ item }}.ign"
+        dest: /var/www/html
+        owner: root
+        group: root
+        mode: 0644
+        remote_src: yes
+      become: yes
+      loop:
+        - bootstrap
+        - master
+        - worker
+  when: not r_stat_ignition_files.stat.exists
+
+- name: Capture kubeadmin password
+  slurp:
+    src: "{{ openshift_install_dir }}/auth/kubeadmin-password"
+  register: r_capture_kubeadmin_password
+
+- name: Wait for OpenShift bootstrap to complete (this may take a while)
+  command: openshift-install wait-for bootstrap-complete --log-level=debug
+  args:
+    chdir: "{{ openshift_install_dir }}"
+  async: 3600  # 60 minutes (30 min for api and 30 min for bootstrap)
+  poll: 30
+
+# TODO: Shut down bootstrap machine
+
+- include_tasks: wait_for_worker_nodes.yml
+
+- name: Wait for OpenShift installation to complete (this may take a while)
+  command: openshift-install wait-for install-complete --log-level=debug
+  args:
+    chdir: "{{ openshift_install_dir }}"
+  async: 2400  # 40 minutes (30 min for cluster and 10 min for console)
+  poll: 30
+
+- name: Output cluster information
+  debug:
+    msg: |
+      Your OpenShift 4 cluster has finished deploying.
+
+      The cluster consists of the following machines:
+        {% for master in terraform_outputs.masters.value %}
+        master{{ loop.index0 }}    {{ master.private_ip }}
+        {% endfor %}
+        {%- for worker in terraform_outputs.workers.value %}
+        worker{{ loop.index0 }}    {{ worker.private_ip }}
+        {% endfor %}
+
+      If you need to SSH into any of the OpenShift nodes, you can do so from the bastion:
+        ssh -i {{ keypair_path }} {{ hostvars['bastion'].ansible_user }}@{{ hostvars['bastion'].ansible_host }}
+
+      You can access the OpenShift web-console here:
+        https://console-openshift-console.apps.{{ cluster_domain }}
+
+      Login to the console with:
+        username: kubeadmin
+        password: {{ r_capture_kubeadmin_password.content | b64decode }}
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !!!                           Action Items                            !!!
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      There are currently some features that have yet to be implemented in this
+      automation, so they require some manual actions on your part.
+
+      1) The bootstrap node is no longer needed. Log into the AWS console (or
+      use the CLI) to shut it down or remove it.

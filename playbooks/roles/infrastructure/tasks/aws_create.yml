@@ -1,0 +1,33 @@
+---
+
+- name: Build infrastructure using Terraform
+  terraform:
+    project_path: "{{ role_path }}/terraform/aws"
+    force_init: yes
+    state: present
+    variables:
+      cluster_name: "{{ cluster_name }}"
+      base_domain: "{{ base_domain }}"
+      cluster_domain: "{{ cluster_domain }}"
+      cluster_id: "{{ cluster_id }}"
+      vpc_cidr: "{{ vpc_cidr | default(omit) }}"
+      rhcos_ami: "{{ rhcos_ami }}"
+      keypair_name: "{{ keypair_name }}"
+    workspace: "{{ terraform_workspace }}"
+  register: r_terraform_apply
+
+- name: Add bastion to inventory
+  add_host:
+    name: bastion
+    ansible_host: "{{ r_terraform_apply.outputs.bastion_eip.value.public_ip }}"
+    ansible_user: ec2-user
+    ansible_ssh_private_key_file: "{{ keypair_path }}"
+    terraform_outputs: "{{ r_terraform_apply.outputs }}"
+  changed_when: no
+
+- name: Wait for bastion to boot
+  wait_for:
+    host: "{{ hostvars['bastion'].ansible_host }}"
+    port: 22
+    search_regex: OpenSSH
+  delegate_to: localhost

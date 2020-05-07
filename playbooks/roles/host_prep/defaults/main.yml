@@ -1,0 +1,4 @@
+---
+# defaults file for host_prep
+
+additional_authorized_keys: []
