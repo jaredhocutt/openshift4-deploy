@@ -20,7 +20,7 @@
   script: "{{ role_path }}/files/csr_approve.sh"
   environment:
     KUBECONFIG: "{{ openshift_install_dir }}/auth/kubeconfig"
-  ignore_errors: yes
+  failed_when: no
   when: number_of_ready_workers != '3'
 
 - name: Set all worker nodes ready status
