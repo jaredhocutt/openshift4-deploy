@@ -84,6 +84,12 @@ Change your current directory to the cloned repository.
 cd openshift4-deploy/
 ```
 
+Add `terraform` to your `PATH`.
+
+```BASH
+export PATH=$(pwd)/bin:$PATH
+```
+
 Activate the `pipenv` environment.
 
 ```bash
