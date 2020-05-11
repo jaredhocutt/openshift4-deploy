@@ -44,6 +44,9 @@ follow the instructions here:
 
 https://pipenv.pypa.io/en/latest/install/#installing-pipenv
 
+If `pipenv` is not installed in a place that shows up on your global `PATH`, be
+sure to add it to your `PATH` before using.
+
 **Step 2**
 
 Clone this repository.
