@@ -113,7 +113,7 @@ and `AWS_SECRET_ACCESS_KEY`.
 
 ```bash
 export AWS_ACCESS_KEY_ID=access_key
-export AWS_SECRET_ACCESS_KEY=secret=key
+export AWS_SECRET_ACCESS_KEY=secret-key
 export AWS_REGION=us-east-1
 ```
 
