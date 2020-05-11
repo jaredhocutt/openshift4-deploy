@@ -127,7 +127,8 @@ environment, log into the AWS console and create one in the region where you
 will be deploying OpenShift 4.
 
 Be sure to remember the **name** of the key pair and the **path** where you
-saved the private key file as you will need them in the next step.
+saved the private key file (this is the `.pem` file that you download when
+creating your AWS key pair) as you will need them in the next step.
 
 **Step 4**
 
