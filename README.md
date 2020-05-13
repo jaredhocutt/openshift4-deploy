@@ -42,13 +42,9 @@ This project provides and container image that include all of the dependencies
 required to run the automation. To run the container image, you will need
 either `podman` or `docker` installed on your system.
 
-To install `podman`, follow the instructions here:
+To install `podman`, follow the instructions here: https://podman.io/getting-started/installation.html
 
-https://podman.io/getting-started/installation.html
-
-To install `docker`, follow the instructions here:
-
-https://docs.docker.com/get-docker/
+To install `docker`, follow the instructions here: https://docs.docker.com/get-docker/
 
 **Step 2**
 
