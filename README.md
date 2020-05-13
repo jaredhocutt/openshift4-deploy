@@ -17,7 +17,7 @@ Deploy OpenShift 4 on the following platforms:
 
 - AWS
 
-**IMPORTANT**
+:warning:	**IMPORTANT** :warning:
 
 This project uses the **bare metal** method of installation on all platforms
 listed above. This translates to there being **NO** integration with the underlying
@@ -38,14 +38,17 @@ https://docs.openshift.com/container-platform/latest/welcome/index.html
 
 **Step 1**
 
-This project uses `pipenv` to create an isolated Python environment for running
-the automation. If you do not already have `pipenv` installed on your system,
-follow the instructions here:
+This project provides and container image that include all of the dependencies
+required to run the automation. To run the container image, you will need
+either `podman` or `docker` installed on your system.
 
-https://pipenv.pypa.io/en/latest/install/#installing-pipenv
+To install `podman`, follow the instructions here:
 
-If `pipenv` is not installed in a place that shows up on your global `PATH`, be
-sure to add it to your `PATH` before using.
+https://podman.io/getting-started/installation.html
+
+To install `docker`, follow the instructions here:
+
+https://docs.docker.com/get-docker/
 
 **Step 2**
 
@@ -53,24 +56,6 @@ Clone this repository.
 
 ```bash
 git clone https://github.com/jaredhocutt/openshift4-deploy.git
-```
-
-**Step 3**
-
-Create the `pipenv` environment and install the dependencies.
-
-```bash
-cd openshift4-deploy/
-
-pipenv install
-```
-
-**Step 4**
-
-Download and install Terraform.
-
-```bash
-./scripts/download_dependencies.sh
 ```
 
 ## Running The Automation
@@ -87,24 +72,19 @@ Change your current directory to the cloned repository.
 cd openshift4-deploy/
 ```
 
-Add `terraform` to your `PATH`.
-
-```BASH
-export PATH=$(pwd)/bin:$PATH
-```
-
-Activate the `pipenv` environment.
+Activate a shell inside the container image provided.
 
 ```bash
-pipenv shell
+./openshift-deploy shell
 ```
 
 **Step 2**
 
 Export your AWS credentials and the region to use.
 
-If you already have a profile setup using the
-`awscli`, you can export `AWS_PROFILE`.
+If you already have a profile setup using the `awscli`, you can export
+`AWS_PROFILE`. Your `~/.aws` directory will already be mounted to the
+environment for you.
 
 ```bash
 export AWS_PROFILE=default
@@ -132,6 +112,9 @@ will be deploying OpenShift 4.
 Be sure to remember the **name** of the key pair and the **path** where you
 saved the private key file (this is the `.pem` file that you download when
 creating your AWS key pair) as you will need them in the next step.
+
+IMPORTANT: The key pair `.pem` file should be in `~/.ssh` as this directory
+gets mounted to the environment for you.
 
 **Step 4**
 
@@ -212,12 +195,31 @@ ansible-playbook -e @vars/ocp4.yml playbooks/create_cluster.yml -v
 
 #### Destroy
 
-Once you no longer need your cluster, execute the automation to destroy the
-cluster while passing in the variable file you used when creating the cluster.
+Once you no longer need your cluster, you can use the automation to destroy
+your cluster.
 
-Be sure to execute the automation from the same machine and directory where you
-created the clsuter as there is state data that is required to clean up all of
-the resources.
+Be sure to execute the automation from the same machine where you created the
+clsuter as there is state data that is required to clean up all of the
+resources located there.
+
+**Step 1**
+
+Change your current directory to the cloned repository.
+
+```bash
+cd openshift4-deploy/
+```
+
+Activate a shell inside the container image provided.
+
+```bash
+./openshift-deploy shell
+```
+
+**Step 2**
+
+Execute the automation while passing in your variable file.
+
 
 ```bash
 ansible-playbook -e @vars/ocp4.yml playbooks/destroy_cluster.yml -v
