@@ -20,7 +20,7 @@ class OpenShiftDeploy(object):
         self.aws_credentials_dir = self._aws_credentials_dir()
 
         self.container_runtime = self._container_runtime()
-        self.container_image = 'quay.io/jaredhocutt/openshift4-deploy'
+        self.container_image = 'quay.io/jaredhocutt/openshift4-deploy:latest'
         self.container_run_command = self._container_run_command()
 
     def _user_home_dir(self):
