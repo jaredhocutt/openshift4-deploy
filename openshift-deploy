@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import subprocess
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SUPPORTED_CONTAINER_RUNTIMES = ['podman', 'docker']
+
+
+class ContainerRuntimeMissingError(Exception):
+    pass
+
+
+class OpenShiftDeploy(object):
+    def __init__(self):
+        self.user_home_dir = self._user_home_dir()
+        self.ssh_keys_dir = self._ssh_keys_dir()
+        self.aws_credentials_dir = self._aws_credentials_dir()
+
+        self.container_runtime = self._container_runtime()
+        self.container_image = 'quay.io/jaredhocutt/openshift4-deploy'
+        self.container_run_command = self._container_run_command()
+
+    def _user_home_dir(self):
+        """
+        The home directory to the actual user, even when run using sudo.
+        """
+        user = os.environ.get('SUDO_USER', os.environ['USER'])
+
+        return os.path.expanduser('~{}'.format(user))
+
+    def _ssh_keys_dir(self):
+        """
+        The SSH keys directory for the user.
+        """
+        return '{}/.ssh'.format(self.user_home_dir)
+
+    def _aws_credentials_dir(self):
+        """
+        The AWS credentials directory for the user.
+        """
+        return '{}/.aws'.format(self.user_home_dir)
+
+    def _container_runtime(self):
+        """
+        The container runtime to use.
+        """
+        for runtime in SUPPORTED_CONTAINER_RUNTIMES:
+            try:
+                subprocess.call([runtime, '--version'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+                return runtime
+            except OSError:
+                pass
+
+        raise ContainerRuntimeMissingError()
+
+    def _container_run_command(self):
+        """
+        The container run command with the common options already specified.
+        """
+        return [
+            self.container_runtime,
+            'run',
+            '--interactive',
+            '--tty',
+            '--rm',
+            '--hostname', 'openshift4-deploy',
+            '--volume', '{}:/root/.ssh:z'.format(self.ssh_keys_dir),
+            '--volume', '{}:/root/.aws:z'.format(self.aws_credentials_dir),
+            '--volume', '{}:/app:z'.format(BASE_DIR),
+            self.container_image,
+        ]
+
+    def shell(self):
+        """
+        Start a shell inside the container.
+        """
+        subprocess.call(self.container_run_command)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+    parser_shell = subparsers.add_parser('shell')
+    parser_shell.set_defaults(action='shell')
+
+    known_args, extra_args = parser.parse_known_args()
+
+    try:
+        od = OpenShiftDeploy()
+    except ContainerRuntimeMissingError:
+        print('\n'.join([
+            'You do not have a supported container runtime installed.',
+            '',
+            'This script supports the following container runtimes:',
+            '\n'.join('  - {}'.format(i) for i in SUPPORTED_CONTAINER_RUNTIMES),
+            '',
+            'Please install one of those options and try again.'
+        ]))
+
+    if not hasattr(known_args, 'action'):
+        parser.print_help()
+        exit(0)
+
+    if known_args.action == 'shell':
+        od.shell()
