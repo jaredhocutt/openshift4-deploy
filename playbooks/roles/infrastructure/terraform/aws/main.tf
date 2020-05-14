@@ -321,7 +321,7 @@ resource "aws_route_table_association" "private2" {
 ###############################################################################
 
 resource "aws_lb" "masters_ext" {
-  name               = "${substr(var.cluster_id, 0, 28}-ext"
+  name               = "${substr(var.cluster_id, 0, 28)}-ext"
   load_balancer_type = "network"
 
   subnets = [
@@ -339,7 +339,7 @@ resource "aws_lb" "masters_ext" {
 }
 
 resource "aws_lb" "masters_int" {
-  name               = "${substr(var.cluster_id, 0, 28}-int"
+  name               = "${substr(var.cluster_id, 0, 28)}-int"
   internal           = true
   load_balancer_type = "network"
 
@@ -358,7 +358,7 @@ resource "aws_lb" "masters_int" {
 }
 
 resource "aws_lb" "ingress" {
-  name               = "${substr(var.cluster_id, 0, 24}}-ingress"
+  name               = "${substr(var.cluster_id, 0, 24)}-ingress"
   load_balancer_type = "network"
 
   subnets = [
