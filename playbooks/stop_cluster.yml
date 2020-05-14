@@ -1,0 +1,22 @@
+---
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Check if a supported cloud has been specified
+      fail:
+        msg: |-
+          You must specify a cloud from the options below:
+
+            - aws
+            - aws_govcloud
+      when: cloud not in ['aws', 'aws_govcloud']
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - ec2_instance:
+        filters:
+          tag:OpenShiftCluster: "{{ cluster_name }}.{{ base_domain }}"
+        state: stopped
+      when: cloud in ['aws', 'aws_govcloud']
