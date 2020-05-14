@@ -321,7 +321,7 @@ resource "aws_route_table_association" "private2" {
 ###############################################################################
 
 resource "aws_lb" "masters_ext" {
-  name               = "${var.cluster_id}-ext"
+  name               = "${substr(var.cluster_id, 0, 28}-ext"
   load_balancer_type = "network"
 
   subnets = [
@@ -339,7 +339,7 @@ resource "aws_lb" "masters_ext" {
 }
 
 resource "aws_lb" "masters_int" {
-  name               = "${var.cluster_id}-int"
+  name               = "${substr(var.cluster_id, 0, 28}-int"
   internal           = true
   load_balancer_type = "network"
 
@@ -358,7 +358,7 @@ resource "aws_lb" "masters_int" {
 }
 
 resource "aws_lb" "ingress" {
-  name               = "${var.cluster_id}-ingress"
+  name               = "${substr(var.cluster_id, 0, 24}}-ingress"
   load_balancer_type = "network"
 
   subnets = [
@@ -376,35 +376,35 @@ resource "aws_lb" "ingress" {
 }
 
 resource "aws_lb_target_group" "api" {
-  name     = "${var.cluster_id}-api"
+  name     = "${substr(var.cluster_id, 0, 28)}-api"
   vpc_id   = aws_vpc.openshift.id
   port     = 6443
   protocol = "TCP"
 }
 
 resource "aws_lb_target_group" "api_int" {
-  name     = "${var.cluster_id}-api-int"
+  name     = "${substr(var.cluster_id, 0, 24)}-api-int"
   vpc_id   = aws_vpc.openshift.id
   port     = 6443
   protocol = "TCP"
 }
 
 resource "aws_lb_target_group" "machine_config" {
-  name     = "${var.cluster_id}-machine-config"
+  name     = "${substr(var.cluster_id, 0, 17)}-machine-config"
   vpc_id   = aws_vpc.openshift.id
   port     = 22623
   protocol = "TCP"
 }
 
 resource "aws_lb_target_group" "http" {
-  name     = "${var.cluster_id}-http"
+  name     = "${substr(var.cluster_id, 0, 27)}-http"
   vpc_id   = aws_vpc.openshift.id
   port     = 80
   protocol = "TCP"
 }
 
 resource "aws_lb_target_group" "https" {
-  name     = "${var.cluster_id}-https"
+  name     = "${substr(var.cluster_id, 0, 26)}-https"
   vpc_id   = aws_vpc.openshift.id
   port     = 443
   protocol = "TCP"
