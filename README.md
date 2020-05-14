@@ -7,7 +7,7 @@
   - [Description](#description)
   - [Initial Setup](#initial-setup)
   - [Running The Automation](#running-the-automation)
-    - [AWS](#aws)
+    - [AWS / AWS GovCloud](#aws--aws-govcloud)
       - [Create](#create)
       - [Destroy](#destroy)
 
@@ -16,6 +16,7 @@
 Deploy OpenShift 4 on the following platforms:
 
 - AWS
+- AWS GovCloud
 
 :warning:	**IMPORTANT** :warning:
 
@@ -56,7 +57,7 @@ git clone https://github.com/jaredhocutt/openshift4-deploy.git
 
 ## Running The Automation
 
-### AWS
+### AWS / AWS GovCloud
 
 #### Create
 
