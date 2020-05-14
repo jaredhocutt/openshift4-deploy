@@ -667,7 +667,7 @@ resource "aws_eip" "bastion" {
   instance = aws_instance.bastion.id
 
   tags = {
-    Name = "${var.cluster_id}-natgw-${data.aws_availability_zones.available.names[0]}"
+    Name = "${var.cluster_id}-bastion"
   }
 
   depends_on = [aws_internet_gateway.openshift]
