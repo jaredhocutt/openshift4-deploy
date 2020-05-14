@@ -3,7 +3,7 @@
 
 - name: Check for ignition files
   stat:
-    path: "{{ openshift_install_dir }}/bootstrap.ign"
+    path: "{{ openshift_install_dir }}/install-config.yaml"
   register: r_stat_ignition_files
 
 - block:
@@ -25,66 +25,12 @@
       loop:
         - install-config.yaml
         - install-config.backup.yaml
-
-    - name: Generate OpenShift manifests
-      command: openshift-install create manifests
-      args:
-        chdir: "{{ openshift_install_dir }}"
-
-    - name: Mark masters as not scheduleable
-      lineinfile:
-        path: "{{ openshift_install_dir }}/manifests/cluster-scheduler-02-config.yml"
-        regexp: '^(\s*mastersSchedulable:)'
-        line: '\1 false'
-        backrefs: yes
-
-    - name: Generate OpenShift ignition configs
-      command: openshift-install create ignition-configs
-      args:
-        chdir: "{{ openshift_install_dir }}"
-
-    - name: Copy OpenShift ignition configs to httpd
-      copy:
-        src: "{{ openshift_install_dir }}/{{ item }}.ign"
-        dest: /var/www/html
-        owner: root
-        group: root
-        mode: 0644
-        remote_src: yes
-      become: yes
-      loop:
-        - bootstrap
-        - master
-        - worker
   when: not r_stat_ignition_files.stat.exists
-
-- name: Capture kubeadmin password
-  slurp:
-    src: "{{ openshift_install_dir }}/auth/kubeadmin-password"
-  register: r_capture_kubeadmin_password
-
-- name: Wait for OpenShift bootstrap to complete (this may take a while)
-  command: openshift-install wait-for bootstrap-complete --log-level=debug
-  args:
-    chdir: "{{ openshift_install_dir }}"
-  async: 3600  # 60 minutes (30 min for api and 30 min for bootstrap)
-  poll: 30
-
-# TODO: Shut down bootstrap machine
-
-- include_tasks: wait_for_worker_nodes.yml
-
-- name: Wait for OpenShift installation to complete (this may take a while)
-  command: openshift-install wait-for install-complete --log-level=debug
-  args:
-    chdir: "{{ openshift_install_dir }}"
-  async: 2400  # 40 minutes (30 min for cluster and 10 min for console)
-  poll: 30
 
 - name: Output cluster information
   debug:
     msg: |
-      Your OpenShift 4 cluster has finished deploying.
+      Your OpenShift 4 infrastructure has finished deploying.
 
       The cluster consists of the following machines:
         {% for master in terraform_outputs.masters.value %}
@@ -96,33 +42,3 @@
 
       If you need to SSH into any of the OpenShift nodes, you can do so from the bastion:
         ssh -i {{ keypair_path }} {{ hostvars['bastion'].ansible_user }}@{{ hostvars['bastion'].ansible_host }}
-
-      You can access the OpenShift web-console here:
-        https://console-openshift-console.apps.{{ cluster_domain }}
-
-      Login to the console with:
-        username: kubeadmin
-        password: {{ r_capture_kubeadmin_password.content | b64decode }}
-
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      !!!                           Action Items                            !!!
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      There are currently some features that have yet to be implemented in this
-      automation, so they require some manual actions on your part.
-
-      - The bootstrap node is no longer needed. Log into the AWS console (or
-        use the CLI) to shut it down or remove it.
-
-      {% if cloud == 'aws_govcloud' %}
-      - You are deploying to AWS GovCloud, Route53 does not provide public
-        zones, which means that all of your DNS entries are in a private zone.
-        To access your cluster, you will need to create a VPN/tunnel connection
-        to your bastion host.
-
-        In a demo environment, an easy way to do this is by using sshuttle.
-
-        https://github.com/sshuttle/sshuttle
-
-        sshuttle --ssh-cmd 'ssh -i {{ keypair_path }}' -r {{ hostvars['bastion'].ansible_user }}@{{ hostvars['bastion'].ansible_host }} {{ vpc_cidr | default('172.31.0.0/16') }} --dns
-      {% endif %}

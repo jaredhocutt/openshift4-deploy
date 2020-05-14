@@ -157,69 +157,6 @@ resource "aws_route_table_association" "public2" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_eip" "natgw_public0" {
-  vpc = true
-
-  tags = {
-    Name = "${var.cluster_id}-natgw-${data.aws_availability_zones.available.names[0]}"
-  }
-
-  depends_on = [aws_internet_gateway.openshift]
-}
-
-resource "aws_eip" "natgw_public1" {
-  vpc = true
-
-  tags = {
-    Name = "${var.cluster_id}-natgw-${data.aws_availability_zones.available.names[1]}"
-  }
-
-  depends_on = [aws_internet_gateway.openshift]
-}
-
-resource "aws_eip" "natgw_public2" {
-  vpc = true
-
-  tags = {
-    Name = "${var.cluster_id}-natgw-${data.aws_availability_zones.available.names[2]}"
-  }
-
-  depends_on = [aws_internet_gateway.openshift]
-}
-
-resource "aws_nat_gateway" "public0" {
-  subnet_id     = aws_subnet.public0.id
-  allocation_id = aws_eip.natgw_public0.id
-
-  tags = {
-    Name = "${var.cluster_id}-${data.aws_availability_zones.available.names[0]}"
-  }
-
-  depends_on = [aws_internet_gateway.openshift]
-}
-
-resource "aws_nat_gateway" "public1" {
-  subnet_id     = aws_subnet.public1.id
-  allocation_id = aws_eip.natgw_public1.id
-
-  tags = {
-    Name = "${var.cluster_id}-${data.aws_availability_zones.available.names[1]}"
-  }
-
-  depends_on = [aws_internet_gateway.openshift]
-}
-
-resource "aws_nat_gateway" "public2" {
-  subnet_id     = aws_subnet.public2.id
-  allocation_id = aws_eip.natgw_public2.id
-
-  tags = {
-    Name = "${var.cluster_id}-${data.aws_availability_zones.available.names[2]}"
-  }
-
-  depends_on = [aws_internet_gateway.openshift]
-}
-
 resource "aws_subnet" "private0" {
   vpc_id                  = aws_vpc.openshift.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 4, 3)
@@ -262,58 +199,27 @@ resource "aws_subnet" "private2" {
   )
 }
 
-resource "aws_route_table" "private0" {
+resource "aws_route_table" "private" {
   vpc_id = aws_vpc.openshift.id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.public0.id
-  }
-
   tags = {
-    Name = "${var.cluster_id}-private-${data.aws_availability_zones.available.names[0]}"
-  }
-}
-
-resource "aws_route_table" "private1" {
-  vpc_id = aws_vpc.openshift.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.public1.id
-  }
-
-  tags = {
-    Name = "${var.cluster_id}-private-${data.aws_availability_zones.available.names[1]}"
-  }
-}
-
-resource "aws_route_table" "private2" {
-  vpc_id = aws_vpc.openshift.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.public2.id
-  }
-
-  tags = {
-    Name = "${var.cluster_id}-private-${data.aws_availability_zones.available.names[2]}"
+    Name = "${var.cluster_id}-private"
   }
 }
 
 resource "aws_route_table_association" "private0" {
   subnet_id      = aws_subnet.private0.id
-  route_table_id = aws_route_table.private0.id
+  route_table_id = aws_route_table.private.id
 }
 
 resource "aws_route_table_association" "private1" {
   subnet_id      = aws_subnet.private1.id
-  route_table_id = aws_route_table.private1.id
+  route_table_id = aws_route_table.private.id
 }
 
 resource "aws_route_table_association" "private2" {
   subnet_id      = aws_subnet.private2.id
-  route_table_id = aws_route_table.private2.id
+  route_table_id = aws_route_table.private.id
 }
 
 ###############################################################################
@@ -321,7 +227,7 @@ resource "aws_route_table_association" "private2" {
 ###############################################################################
 
 resource "aws_lb" "masters_ext" {
-  name               = "${var.cluster_id}-ext"
+  name               = "${substr(var.cluster_id, 0, 28)}-ext"
   load_balancer_type = "network"
 
   subnets = [
@@ -339,7 +245,7 @@ resource "aws_lb" "masters_ext" {
 }
 
 resource "aws_lb" "masters_int" {
-  name               = "${var.cluster_id}-int"
+  name               = "${substr(var.cluster_id, 0, 28)}-int"
   internal           = true
   load_balancer_type = "network"
 
@@ -358,7 +264,7 @@ resource "aws_lb" "masters_int" {
 }
 
 resource "aws_lb" "ingress" {
-  name               = "${var.cluster_id}-ingress"
+  name               = "${substr(var.cluster_id, 0, 24)}-ingress"
   load_balancer_type = "network"
 
   subnets = [
@@ -376,35 +282,35 @@ resource "aws_lb" "ingress" {
 }
 
 resource "aws_lb_target_group" "api" {
-  name     = "${var.cluster_id}-api"
+  name     = "${substr(var.cluster_id, 0, 28)}-api"
   vpc_id   = aws_vpc.openshift.id
   port     = 6443
   protocol = "TCP"
 }
 
 resource "aws_lb_target_group" "api_int" {
-  name     = "${var.cluster_id}-api-int"
+  name     = "${substr(var.cluster_id, 0, 24)}-api-int"
   vpc_id   = aws_vpc.openshift.id
   port     = 6443
   protocol = "TCP"
 }
 
 resource "aws_lb_target_group" "machine_config" {
-  name     = "${var.cluster_id}-machine-config"
+  name     = "${substr(var.cluster_id, 0, 17)}-machine-config"
   vpc_id   = aws_vpc.openshift.id
   port     = 22623
   protocol = "TCP"
 }
 
 resource "aws_lb_target_group" "http" {
-  name     = "${var.cluster_id}-http"
+  name     = "${substr(var.cluster_id, 0, 27)}-http"
   vpc_id   = aws_vpc.openshift.id
   port     = 80
   protocol = "TCP"
 }
 
 resource "aws_lb_target_group" "https" {
-  name     = "${var.cluster_id}-https"
+  name     = "${substr(var.cluster_id, 0, 26)}-https"
   vpc_id   = aws_vpc.openshift.id
   port     = 443
   protocol = "TCP"
@@ -667,7 +573,7 @@ resource "aws_eip" "bastion" {
   instance = aws_instance.bastion.id
 
   tags = {
-    Name = "${var.cluster_id}-natgw-${data.aws_availability_zones.available.names[0]}"
+    Name = "${var.cluster_id}-bastion"
   }
 
   depends_on = [aws_internet_gateway.openshift]
@@ -794,6 +700,14 @@ resource "aws_route53_zone" "private" {
       "Name", "${var.cluster_id}-int"
     )
   )
+}
+
+resource "aws_route53_record" "registry" {
+  zone_id = aws_route53_zone.private.zone_id
+  name    = "registry"
+  type    = "CNAME"
+  ttl     = "300"
+  records = [aws_instance.bastion.private_ip]
 }
 
 resource "aws_route53_record" "api_private" {
