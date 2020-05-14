@@ -68,6 +68,7 @@ class OpenShiftDeploy(object):
             '--interactive',
             '--tty',
             '--rm',
+            '--pull', 'always',
             '--hostname', 'openshift4-deploy',
             '--volume', '{}:/root/.ssh:z'.format(self.ssh_keys_dir),
             '--volume', '{}:/root/.aws:z'.format(self.aws_credentials_dir),
