@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 aws-shell = "*"
+pylint = "*"
 
 [packages]
 ansible = ">=2.9,<2.10"

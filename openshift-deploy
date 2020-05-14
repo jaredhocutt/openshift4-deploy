@@ -14,7 +14,9 @@ class ContainerRuntimeMissingError(Exception):
 
 
 class OpenShiftDeploy(object):
-    def __init__(self):
+    def __init__(self, skip_update=False):
+        self.skip_update = skip_update
+
         self.user_home_dir = self._user_home_dir()
         self.ssh_keys_dir = self._ssh_keys_dir()
         self.aws_credentials_dir = self._aws_credentials_dir()
@@ -68,7 +70,7 @@ class OpenShiftDeploy(object):
             '--interactive',
             '--tty',
             '--rm',
-            '--pull', 'always',
+            '--pull', 'always' if not self.skip_update else 'missing',
             '--hostname', 'openshift4-deploy',
             '--volume', '{}:/root/.ssh:z'.format(self.ssh_keys_dir),
             '--volume', '{}:/root/.aws:z'.format(self.aws_credentials_dir),
@@ -84,16 +86,27 @@ class OpenShiftDeploy(object):
 
 
 if __name__ == '__main__':
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument(
+        '--skip-update',
+        action='store_true',
+        help='skip automatic update of the conatiner image')
+
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
-    parser_shell = subparsers.add_parser('shell')
+    parser_shell = subparsers.add_parser(
+        'shell',
+        parents=[parent_parser],
+        help='start a shell inside of the environment')
     parser_shell.set_defaults(action='shell')
 
     known_args, extra_args = parser.parse_known_args()
 
     try:
-        od = OpenShiftDeploy()
+        od = OpenShiftDeploy(
+            skip_update=known_args.skip_update,
+        )
     except ContainerRuntimeMissingError:
         print('\n'.join([
             'You do not have a supported container runtime installed.',
