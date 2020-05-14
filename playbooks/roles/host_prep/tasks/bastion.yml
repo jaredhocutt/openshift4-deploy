@@ -37,6 +37,12 @@
       {% endfor %}
   become: yes
 
+- name: Set KUBECONFIG in .bashrc
+  lineinfile:
+    path: ~/.bashrc
+    regexp: "^export KUBECONFIG="
+    line: export KUBECONFIG=$HOME/ocp4/auth/kubeconfig
+
 - name: Install required packages
   yum:
     name:
