@@ -109,6 +109,7 @@
         username: kubeadmin
         password: {{ r_capture_kubeadmin_password.content | b64decode }}
 
+      {% if cloud == 'aws_govcloud' %}
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !!!                           Action Items                            !!!
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -116,10 +117,6 @@
       There are currently some features that have yet to be implemented in this
       automation, so they require some manual actions on your part.
 
-      - The bootstrap node is no longer needed. Log into the AWS console (or
-        use the CLI) to shut it down or remove it.
-
-      {% if cloud == 'aws_govcloud' %}
       - You are deploying to AWS GovCloud, Route53 does not provide public
         zones, which means that all of your DNS entries are in a private zone.
         To access your cluster, you will need to create a VPN/tunnel connection
