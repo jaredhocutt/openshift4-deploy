@@ -12,6 +12,7 @@ USER root
 
 RUN \
     dnf install -y \
+        git \
         openssh-clients \
         python3 \
         python3-pip \
