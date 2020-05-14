@@ -13,6 +13,14 @@ class ContainerRuntimeMissingError(Exception):
     pass
 
 
+class OpenShiftDeployHelper(object):
+    @staticmethod
+    def file_exists(value):
+        if not os.path.isfile(value):
+            raise argparse.ArgumentTypeError('The path {} does not exist'.format(value))
+        return value
+
+
 class OpenShiftDeploy(object):
     def __init__(self, skip_update=False):
         self.skip_update = skip_update
@@ -45,6 +53,12 @@ class OpenShiftDeploy(object):
         """
         return '{}/.aws'.format(self.user_home_dir)
 
+    def _vars_file_realpath(self, vars_file):
+        """
+        The real path to the variables file inside of the container.
+        """
+        return os.path.realpath(vars_file).replace(BASE_DIR, '/app')
+
     def _container_runtime(self):
         """
         The container runtime to use.
@@ -64,7 +78,7 @@ class OpenShiftDeploy(object):
         """
         The container run command with the common options already specified.
         """
-        return [
+        cmd = [
             self.container_runtime,
             'run',
             '--interactive',
@@ -75,14 +89,78 @@ class OpenShiftDeploy(object):
             '--volume', '{}:/root/.ssh:z'.format(self.ssh_keys_dir),
             '--volume', '{}:/root/.aws:z'.format(self.aws_credentials_dir),
             '--volume', '{}:/app:z'.format(BASE_DIR),
-            self.container_image,
         ]
+
+        # Inject environment variables from host that are used for running the
+        # automation
+        for key, value in os.environ.items():
+            if key.startswith('AWS_'):
+                cmd.extend(['--env', '{}={}'.format(key, value)])
+
+        cmd.append(self.container_image)
+        return cmd
+
+    def _playbook_run_command(self, playbook, vars_file, playbook_args=[]):
+        cmd = self.container_run_command + [
+            'ansible-playbook', playbook,
+            '-e', '@{}'.format(self._vars_file_realpath(vars_file)),
+        ] + playbook_args
+
+        return cmd
 
     def shell(self):
         """
-        Start a shell inside the container.
+        Open a shell inside the environment.
         """
         subprocess.call(self.container_run_command)
+
+    def create(self, vars_file, playbook_args=[]):
+        """
+        Create the cluster.
+        """
+        subprocess.call(
+            self._playbook_run_command(
+                'playbooks/create_cluster.yml',
+                vars_file,
+                playbook_args,
+            )
+        )
+
+    def destroy(self, vars_file, playbook_args=[]):
+        """
+        Destroy the cluster.
+        """
+        subprocess.call(
+            self._playbook_run_command(
+                'playbooks/destroy_cluster.yml',
+                vars_file,
+                playbook_args,
+            )
+        )
+
+    def start(self, vars_file, playbook_args=[]):
+        """
+        Start the machines in the cluster.
+        """
+        subprocess.call(
+            self._playbook_run_command(
+                'playbooks/start_cluster.yml',
+                vars_file,
+                playbook_args,
+            )
+        )
+
+    def stop(self, vars_file, playbook_args=[]):
+        """
+        Stop the machines in the cluster.
+        """
+        subprocess.call(
+            self._playbook_run_command(
+                'playbooks/stop_cluster.yml',
+                vars_file,
+                playbook_args,
+            )
+        )
 
 
 if __name__ == '__main__':
@@ -92,14 +170,45 @@ if __name__ == '__main__':
         action='store_true',
         help='skip automatic update of the conatiner image')
 
+    parent_parser_playbooks = argparse.ArgumentParser(add_help=False)
+    parent_parser_playbooks.add_argument(
+        '--vars-file',
+        required=True,
+        type=OpenShiftDeployHelper.file_exists,
+        help='path to your variables file')
+
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
     parser_shell = subparsers.add_parser(
         'shell',
         parents=[parent_parser],
-        help='start a shell inside of the environment')
+        help='open a shell inside of the environment')
     parser_shell.set_defaults(action='shell')
+
+    parser_shell = subparsers.add_parser(
+        'create',
+        parents=[parent_parser, parent_parser_playbooks,],
+        help='create the cluster')
+    parser_shell.set_defaults(action='create')
+
+    parser_shell = subparsers.add_parser(
+        'destroy',
+        parents=[parent_parser, parent_parser_playbooks,],
+        help='destroy the cluster')
+    parser_shell.set_defaults(action='destroy')
+
+    parser_shell = subparsers.add_parser(
+        'start',
+        parents=[parent_parser, parent_parser_playbooks,],
+        help='start the machines in your cluster')
+    parser_shell.set_defaults(action='start')
+
+    parser_shell = subparsers.add_parser(
+        'stop',
+        parents=[parent_parser, parent_parser_playbooks,],
+        help='stop the machines in your cluster')
+    parser_shell.set_defaults(action='stop')
 
     known_args, extra_args = parser.parse_known_args()
 
@@ -123,3 +232,11 @@ if __name__ == '__main__':
 
     if known_args.action == 'shell':
         od.shell()
+    elif known_args.action == 'create':
+        od.create(known_args.vars_file, extra_args)
+    elif known_args.action == 'destroy':
+        od.destroy(known_args.vars_file, extra_args)
+    elif known_args.action == 'start':
+        od.start(known_args.vars_file, extra_args)
+    elif known_args.action == 'stop':
+        od.stop(known_args.vars_file, extra_args)

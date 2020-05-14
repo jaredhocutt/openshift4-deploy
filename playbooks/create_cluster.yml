@@ -1,6 +1,7 @@
 ---
 
 - hosts: localhost
+  gather_facts: no
   tasks:
     - name: Check if a supported cloud has been specified
       fail:
@@ -8,6 +9,7 @@
           You must specify a cloud from the options below:
 
             - aws
+            - aws_govcloud
       when: cloud not in ['aws', 'aws_govcloud']
 
 - hosts: localhost
