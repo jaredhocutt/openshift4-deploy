@@ -49,10 +49,21 @@
       - bind-utils
       - git
       - httpd
+      - python3
+      - python3-pip
       - screen
       - unzip
       - vim
       - wget
+    state: present
+  become: yes
+
+- name: Install k8s module dependencies
+  pip:
+    name:
+      - openshift
+      - PyYAML
+    executable: pip3
     state: present
   become: yes
 
