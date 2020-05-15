@@ -38,3 +38,11 @@
     - import_role:
         name: openshift_install
       tags: [install]
+
+    - import_role:
+        name: post_config
+      tags: [config]
+
+    - import_role:
+        name: output_cluster_info
+      tags: [output]
