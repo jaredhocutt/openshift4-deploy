@@ -39,7 +39,7 @@ https://docs.openshift.com/container-platform/latest/welcome/index.html
 
 **Step 1**
 
-This project provides and container image that include all of the dependencies
+This project provides a container image that includes all of the dependencies
 required to run the automation. To run the container image, you will need
 either `podman` or `docker` installed on your system.
 
