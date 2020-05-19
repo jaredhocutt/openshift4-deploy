@@ -18,9 +18,9 @@ base_domain: example.com
 rhcos_ami: ami-123456789
 # The name of the AWS key pair to use for the bastion host
 keypair_name: mykeypair
-# The path to the private key for your AWS key pair
+# The path to the AWS private key so that Ansible can setup the bastion host
 keypair_path: ~/.ssh/mykeypair.pem
 
-# The content of your pull secret, which can be found
+# The content of your pull secret, which can be found at
 # https://cloud.redhat.com/openshift/install/pull-secret
 pull_secret: ''
