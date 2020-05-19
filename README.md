@@ -114,7 +114,8 @@ saved the private key file (this is the `.pem` file that you download when
 creating your AWS key pair) as you will need them in the next step.
 
 IMPORTANT: The key pair `.pem` file should be in `~/.ssh` as this directory
-gets mounted to the environment for you.
+gets mounted to the environment for you. Also ensure that you set the
+permissions to `0400` as you would for any SSH key.
 
 **Step 4 - Create your variable file**
 
