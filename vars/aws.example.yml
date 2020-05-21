@@ -53,4 +53,4 @@ keypair_path: ~/.ssh/mykeypair.pem
 pull_secret: ''
 
 # Install the cluster in FIPS mode
-install_fips_mode: false
+fips_mode: false
