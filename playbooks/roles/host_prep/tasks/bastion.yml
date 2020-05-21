@@ -37,16 +37,33 @@
       {% endfor %}
   become: yes
 
+- name: Set KUBECONFIG in .bashrc
+  lineinfile:
+    path: ~/.bashrc
+    regexp: "^export KUBECONFIG="
+    line: export KUBECONFIG=$HOME/ocp4/auth/kubeconfig
+
 - name: Install required packages
   yum:
     name:
       - bind-utils
       - git
       - httpd
+      - python3
+      - python3-pip
       - screen
       - unzip
       - vim
       - wget
+    state: present
+  become: yes
+
+- name: Install k8s module dependencies
+  pip:
+    name:
+      - openshift
+      - PyYAML
+    executable: pip3
     state: present
   become: yes
 

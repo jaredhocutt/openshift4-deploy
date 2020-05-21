@@ -1,0 +1,18 @@
+---
+# tasks file for post_config
+
+- name: Configure registry for emptyDir storage
+  k8s:
+    resource_definition:
+      apiVersion: imageregistry.operator.openshift.io/v1
+      kind: Config
+      metadata:
+        name: cluster
+      spec:
+        managementState: Managed
+        storage:
+          emptyDir: {}
+    merge_type: merge
+    state: present
+  vars:
+    ansible_python_interpreter: python3

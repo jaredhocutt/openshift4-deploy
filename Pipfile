@@ -5,12 +5,14 @@ verify_ssl = true
 
 [dev-packages]
 aws-shell = "*"
+pylint = "*"
 
 [packages]
 ansible = ">=2.9,<2.10"
 boto = "*"
 boto3 = "*"
 botocore = "*"
+openshift = "*"
 
 [requires]
 python_version = "3"

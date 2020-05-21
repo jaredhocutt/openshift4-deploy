@@ -321,7 +321,7 @@ resource "aws_route_table_association" "private2" {
 ###############################################################################
 
 resource "aws_lb" "masters_ext" {
-  name               = "${var.cluster_id}-ext"
+  name               = "${substr(var.cluster_id, 0, 28)}-ext"
   load_balancer_type = "network"
 
   subnets = [
@@ -339,7 +339,7 @@ resource "aws_lb" "masters_ext" {
 }
 
 resource "aws_lb" "masters_int" {
-  name               = "${var.cluster_id}-int"
+  name               = "${substr(var.cluster_id, 0, 28)}-int"
   internal           = true
   load_balancer_type = "network"
 
@@ -358,7 +358,7 @@ resource "aws_lb" "masters_int" {
 }
 
 resource "aws_lb" "ingress" {
-  name               = "${var.cluster_id}-ingress"
+  name               = "${substr(var.cluster_id, 0, 24)}-ingress"
   load_balancer_type = "network"
 
   subnets = [
@@ -376,38 +376,73 @@ resource "aws_lb" "ingress" {
 }
 
 resource "aws_lb_target_group" "api" {
-  name     = "${var.cluster_id}-api"
+  name     = "${substr(var.cluster_id, 0, 28)}-api"
   vpc_id   = aws_vpc.openshift.id
   port     = 6443
   protocol = "TCP"
+
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-api"
+    )
+  )
 }
 
 resource "aws_lb_target_group" "api_int" {
-  name     = "${var.cluster_id}-api-int"
+  name     = "${substr(var.cluster_id, 0, 24)}-api-int"
   vpc_id   = aws_vpc.openshift.id
   port     = 6443
   protocol = "TCP"
+
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-api-int"
+    )
+  )
 }
 
 resource "aws_lb_target_group" "machine_config" {
-  name     = "${var.cluster_id}-machine-config"
+  name     = "${substr(var.cluster_id, 0, 17)}-machine-config"
   vpc_id   = aws_vpc.openshift.id
   port     = 22623
   protocol = "TCP"
+
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-machine-config"
+    )
+  )
 }
 
 resource "aws_lb_target_group" "http" {
-  name     = "${var.cluster_id}-http"
+  name     = "${substr(var.cluster_id, 0, 27)}-http"
   vpc_id   = aws_vpc.openshift.id
   port     = 80
   protocol = "TCP"
+
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-http"
+    )
+  )
 }
 
 resource "aws_lb_target_group" "https" {
-  name     = "${var.cluster_id}-https"
+  name     = "${substr(var.cluster_id, 0, 26)}-https"
   vpc_id   = aws_vpc.openshift.id
   port     = 443
   protocol = "TCP"
+
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-https"
+    )
+  )
 }
 
 resource "aws_lb_listener" "api" {
@@ -540,9 +575,12 @@ resource "aws_security_group" "bastion" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.cluster_id}-bastion"
-  }
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-bastion"
+    )
+  )
 }
 
 resource "aws_security_group" "bootstrap" {
@@ -564,9 +602,12 @@ resource "aws_security_group" "bootstrap" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.cluster_id}-bootstrap"
-  }
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-bootstrap"
+    )
+  )
 }
 
 resource "aws_security_group" "master" {
@@ -595,9 +636,12 @@ resource "aws_security_group" "master" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.cluster_id}-master"
-  }
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-master"
+    )
+  )
 }
 
 resource "aws_security_group" "worker" {
@@ -633,9 +677,12 @@ resource "aws_security_group" "worker" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.cluster_id}-worker"
-  }
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-worker"
+    )
+  )
 }
 
 ###############################################################################
@@ -657,24 +704,30 @@ resource "aws_instance" "bastion" {
   vpc_security_group_ids      = [aws_security_group.bastion.id, aws_security_group.master.id]
   associate_public_ip_address = true
 
-  tags = {
-    Name = "${var.cluster_id}-bastion"
-  }
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-bastion"
+    )
+  )
 }
 
 resource "aws_eip" "bastion" {
   vpc      = true
   instance = aws_instance.bastion.id
 
-  tags = {
-    Name = "${var.cluster_id}-natgw-${data.aws_availability_zones.available.names[0]}"
-  }
+  tags = merge(
+    local.kubernetes_cluster_shared_tag,
+    map(
+      "Name", "${var.cluster_id}-bastion"
+    )
+  )
 
   depends_on = [aws_internet_gateway.openshift]
 }
 
 resource "aws_instance" "bootstrap" {
-  instance_type = "m5.xlarge"
+  instance_type = "i3.large"
   ami           = var.rhcos_ami
   subnet_id     = local.private_subnets[0].id
 
