@@ -21,6 +21,7 @@ networking:
   - 172.30.0.0/16
 platform:
   none: {}
+fips: {{ install_fips_mode }}
 pullSecret: '{{ pull_secret }}'
 sshKey: >-
   {{ ssh_public_key }}

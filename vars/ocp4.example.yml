@@ -24,3 +24,6 @@ keypair_path: ~/.ssh/mykeypair.pem
 # The content of your pull secret, which can be found
 # https://cloud.redhat.com/openshift/install/pull-secret
 pull_secret: ''
+
+# Install the cluster in FIPS mode 
+install_fips_mode: false 
