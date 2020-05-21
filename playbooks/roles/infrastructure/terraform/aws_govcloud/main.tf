@@ -723,7 +723,7 @@ resource "aws_eip" "bastion" {
 }
 
 resource "aws_instance" "bootstrap" {
-  instance_type = "m5.xlarge"
+  instance_type = "i3.large"
   ami           = var.rhcos_ami
   subnet_id     = local.private_subnets[0].id
 
