@@ -51,3 +51,6 @@ keypair_path: ~/.ssh/mykeypair.pem
 #
 # Be sure to wrap its value in single quotes.
 pull_secret: ''
+
+# Install the cluster in FIPS mode
+fips_mode: false
