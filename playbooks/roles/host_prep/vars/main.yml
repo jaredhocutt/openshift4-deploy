@@ -1,2 +1,4 @@
 ---
 # vars file for host_prep
+
+openshift_binaries_base_url: http://mirror.openshift.com/pub/openshift-v4/clients/ocp
