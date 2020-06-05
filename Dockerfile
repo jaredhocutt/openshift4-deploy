@@ -26,11 +26,20 @@ RUN \
 
 WORKDIR /tmp
 
+# Install Terraform
 RUN \
     curl -O https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
     && unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
     && mv terraform /usr/local/bin \
     && rm -f terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+# Install AWS CLI
+RUN \
+    curl -O https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip \
+    && unzip awscli-exe-linux-x86_64.zip \
+    && ./aws/install \
+    && rm -f awscli-exe-linux-x86_64.zip \
+    && rm -rf ./aws
 
 WORKDIR /app
 

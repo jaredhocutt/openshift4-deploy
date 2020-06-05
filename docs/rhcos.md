@@ -69,7 +69,7 @@ RHCOS image.
 
 ```json
 {
-   "Description": "RHCOS 4.3.8 AWS VMDK",
+   "Description": "rhcos-4.3.8-x86_64-aws.x86_64",
    "Format": "vmdk",
    "UserBucket": {
       "S3Bucket": "name-of-your-bucket",
@@ -85,7 +85,7 @@ Import the disk as a snapshot into AWS.
 ```bash
 aws ec2 import-snapshot \
    --region us-gov-west-1 \
-   --description "rhcos-4.3.8" \
+   --description "rhcos-4.3.8-x86_64-aws.x86_64" \
    --disk-container file://containers.json
 ```
 
@@ -103,10 +103,10 @@ After the import is complete, you should see similar output to below.
 {
     "ImportSnapshotTasks": [
         {
-            "Description": "rhcos-4.3.8",
+            "Description": "rhcos-4.3.8-x86_64-aws.x86_64",
             "ImportTaskId": "import-snap-fh6i8uil",
             "SnapshotTaskDetail": {
-                "Description": "rhcos-4.3.8",
+                "Description": "rhcos-4.3.8-x86_64-aws.x86_64",
                 "DiskImageSize": 819056640.0,
                 "Format": "VMDK",
                 "SnapshotId": "snap-06331325870076318",
@@ -132,9 +132,9 @@ when checking the snapshot task.
 aws ec2 register-image \
    --region us-gov-west-1 \
    --architecture x86_64 \
-   --description "rhcos-4.3.8" \
+   --description "rhcos-4.3.8-x86_64-aws.x86_64" \
    --ena-support \
-   --name "rhcos-4.3.8" \
+   --name "rhcos-4.3.8-x86_64-aws.x86_64" \
    --virtualization-type hvm \
    --root-device-name '/dev/sda1' \
    --block-device-mappings 'DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,SnapshotId=snap-06331325870076318}'
