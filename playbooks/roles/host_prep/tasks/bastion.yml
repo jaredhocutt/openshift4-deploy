@@ -28,12 +28,11 @@
   blockinfile:
     path: /etc/hosts
     block: |
-      {{ terraform_outputs.bootstrap.value.private_ip }}  bootstrap
-      {% for master in terraform_outputs.masters.value %}
-      {{ master.private_ip }}  master{{ loop.index0 }}
+      {% for master in groups.masters %}
+      {{ hostvars[master].ip_address }}  master{{ loop.index0 }}
       {% endfor %}
-      {%- for worker in terraform_outputs.workers.value %}
-      {{ worker.private_ip }}  worker{{ loop.index0 }}
+      {%- for worker in groups.workers %}
+      {{ hostvars[worker].ip_address }}  worker{{ loop.index0 }}
       {% endfor %}
   become: yes
 

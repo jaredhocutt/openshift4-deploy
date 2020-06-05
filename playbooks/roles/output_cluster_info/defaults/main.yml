@@ -1,2 +1,6 @@
 ---
 # defaults file for output_cluster_info
+
+openshift_install_dir: "{{ ansible_user_dir }}/ocp4"
+
+cluster_domain: "{{ cluster_name }}.{{ base_domain }}"

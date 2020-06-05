@@ -1,7 +1,6 @@
 ---
 # tasks file for output_cluster_info
 
-
 - name: Capture kubeadmin password
   slurp:
     src: "{{ openshift_install_dir }}/auth/kubeadmin-password"
@@ -13,11 +12,11 @@
       Your OpenShift 4 cluster has finished deploying.
 
       The cluster consists of the following machines:
-        {% for master in terraform_outputs.masters.value %}
-        master{{ loop.index0 }}    {{ master.private_ip }}
+        {% for master in groups.masters %}
+        master{{ loop.index0 }}    {{ hostvars[master].ip_address }}
         {% endfor %}
-        {%- for worker in terraform_outputs.workers.value %}
-        worker{{ loop.index0 }}    {{ worker.private_ip }}
+        {%- for worker in groups.workers %}
+        worker{{ loop.index0 }}    {{ hostvars[worker].ip_address }}
         {% endfor %}
 
       If you need to SSH into any of the OpenShift nodes, you can do so from the bastion:
@@ -34,9 +33,6 @@
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !!!                           Action Items                            !!!
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      There are currently some features that have yet to be implemented in this
-      automation, so they require some manual actions on your part.
 
       - You are deploying to AWS GovCloud, Route53 does not provide public
         zones, which means that all of your DNS entries are in a private zone.
