@@ -6,6 +6,7 @@ verify_ssl = true
 [dev-packages]
 aws-shell = "*"
 pylint = "*"
+autopep8 = "*"
 
 [packages]
 ansible = ">=2.9,<2.10"
@@ -13,6 +14,7 @@ boto = "*"
 boto3 = "*"
 botocore = "*"
 openshift = "*"
+pyyaml = ">=3.08"
 
 [requires]
 python_version = "3"
