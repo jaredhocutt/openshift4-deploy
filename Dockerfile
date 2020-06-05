@@ -3,6 +3,10 @@ FROM docker.io/library/fedora:32
 ENV TERRAFORM_VERSION=0.12.24
 ENV PYCURL_SSL_LIBRARY=openssl
 
+ENV LC_CTYPE=en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US.UTF-8
+
 LABEL \
     name="openshift4-deploy" \
     description="OpenShift 4 deployment tool that uses the bare metal method of installation" \
