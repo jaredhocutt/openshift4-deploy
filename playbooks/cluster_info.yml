@@ -1,0 +1,27 @@
+---
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Check if a supported cloud has been specified
+      fail:
+        msg: |-
+          You must specify a cloud from the options below:
+
+            - aws
+            - aws_govcloud
+      when: cloud not in ['aws', 'aws_govcloud']
+
+- hosts: localhost
+  tasks:
+    - import_role:
+        name: infrastructure
+        tasks_from: aws_info
+      tags: [info]
+      when: cloud in ['aws', 'aws_govcloud']
+
+- hosts: bastion
+  tasks:
+    - import_role:
+        name: output_cluster_info
+      tags: [output]

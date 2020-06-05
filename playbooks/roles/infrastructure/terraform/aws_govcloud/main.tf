@@ -703,7 +703,8 @@ resource "aws_instance" "bastion" {
   tags = merge(
     local.kubernetes_cluster_shared_tag,
     map(
-      "Name", "${var.cluster_id}-bastion"
+      "Name", "${var.cluster_id}-bastion",
+      "OpenShiftRole", "bastion"
     )
   )
 }
@@ -743,9 +744,14 @@ resource "aws_instance" "bootstrap" {
   tags = merge(
     local.kubernetes_cluster_shared_tag,
     map(
-      "Name", "${var.cluster_id}-bootstrap"
+      "Name", "${var.cluster_id}-bootstrap",
+      "OpenShiftRole", "bootstrap"
     )
   )
+
+  lifecycle {
+    ignore_changes = all
+  }
 
   depends_on = [aws_instance.bastion]
 }
@@ -773,7 +779,8 @@ resource "aws_instance" "masters" {
   tags = merge(
     local.kubernetes_cluster_shared_tag,
     map(
-      "Name", "${var.cluster_id}-master-${count.index}"
+      "Name", "${var.cluster_id}-master-${count.index}",
+      "OpenShiftRole", "master"
     )
   )
 
@@ -803,7 +810,8 @@ resource "aws_instance" "workers" {
   tags = merge(
     local.kubernetes_cluster_shared_tag,
     map(
-      "Name", "${var.cluster_id}-worker-${count.index}"
+      "Name", "${var.cluster_id}-worker-${count.index}",
+      "OpenShiftRole", "worker"
     )
   )
 

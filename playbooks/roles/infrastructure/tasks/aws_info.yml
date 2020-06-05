@@ -1,0 +1,56 @@
+---
+
+- name: Capture instance info in AWS
+  ec2_instance_info:
+    filters:
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+  register: r_capture_instance_info
+
+- name: Add bastion to inventory
+  add_host:
+    name: bastion
+    ansible_host: "{{ item.public_ip_address }}"
+    ansible_user: ec2-user
+    ansible_ssh_private_key_file: "{{ keypair_path }}"
+    ip_address: "{{ item.private_ip_address }}"
+    instance_id: "{{ item.instance_id }}"
+  loop:
+    - "{{ r_capture_instance_info | json_query('instances[?tags.OpenShiftRole==`bastion`]') | first }}"
+  changed_when: no
+
+- name: Add bootstrap to inventory
+  add_host:
+    name: bootstrap
+    ansible_host: "{{ item.private_ip_address }}"
+    ansible_user: ec2-user
+    ansible_ssh_private_key_file: "{{ keypair_path }}"
+    ip_address: "{{ item.private_ip_address }}"
+    instance_id: "{{ item.instance_id }}"
+  loop: "{{ r_capture_instance_info | json_query('instances[?tags.OpenShiftRole==`bootstrap`]') }}"
+  changed_when: no
+
+- name: Add masters to inventory
+  add_host:
+    name: master{{ idx }}
+    groups: openshift,masters
+    ansible_host: "{{ item.private_ip_address }}"
+    ansible_user: core
+    ip_address: "{{ item.private_ip_address }}"
+    instance_id: "{{ item.instance_id }}"
+  loop: "{{ r_capture_instance_info | json_query('instances[?tags.OpenShiftRole==`master`]') | sort(attribute='tags.Name') }}"
+  loop_control:
+    index_var: idx
+  changed_when: no
+
+- name: Add workers to inventory
+  add_host:
+    name: worker{{ idx }}
+    groups: openshift,workers
+    ansible_host: "{{ item.private_ip_address }}"
+    ansible_user: core
+    ip_address: "{{ item.private_ip_address }}"
+    instance_id: "{{ item.instance_id }}"
+  loop: "{{ r_capture_instance_info | json_query('instances[?tags.OpenShiftRole==`worker`]') | sort(attribute='tags.Name') }}"
+  loop_control:
+    index_var: idx
+  changed_when: no

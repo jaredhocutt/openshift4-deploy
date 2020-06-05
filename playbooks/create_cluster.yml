@@ -14,15 +14,13 @@
 
 - hosts: localhost
   tasks:
-    - import_role:
+    - include_role:
         name: infrastructure
         tasks_from: aws_create
       tags: [infrastructure]
       when: cloud == 'aws'
 
-- hosts: localhost
-  tasks:
-    - import_role:
+    - include_role:
         name: infrastructure
         tasks_from: aws_govcloud_create
       tags: [infrastructure]

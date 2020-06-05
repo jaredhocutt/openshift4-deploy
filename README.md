@@ -6,10 +6,12 @@
   - [Table of Contents](#table-of-contents)
   - [Description](#description)
   - [Initial Setup](#initial-setup)
-  - [Running The Automation](#running-the-automation)
-    - [AWS / AWS GovCloud](#aws--aws-govcloud)
-      - [Create](#create)
-      - [Destroy](#destroy)
+  - [AWS / AWS GovCloud](#aws--aws-govcloud)
+    - [Create](#create)
+    - [Start / Stop](#start--stop)
+    - [Destroy](#destroy)
+    - [Cluster Information](#cluster-information)
+    - [Shell](#shell)
 
 ## Description
 
@@ -55,13 +57,7 @@ Clone this repository.
 git clone https://github.com/jaredhocutt/openshift4-deploy.git
 ```
 
-## Running The Automation
-
-### AWS / AWS GovCloud
-
-#### Create
-
-**Step 1: Enter the container environment**
+**Step 3**
 
 Change your current directory to the cloned repository.
 
@@ -69,15 +65,13 @@ Change your current directory to the cloned repository.
 cd openshift4-deploy/
 ```
 
-Activate a shell inside the container image provided.
+> **NOTE:** The following sections of documentation will assume that you are in
+> the root directory of the clone repository.
 
-```bash
-./openshift-deploy shell
-```
+## AWS / AWS GovCloud
 
-**Step 2: Export your environment variables**
-
-Export your AWS credentials and the region to use.
+In order to follow the steps below, you need to export your AWS credentials and
+the region to use.
 
 If you already have a profile setup using the `awscli`, you can export
 `AWS_PROFILE`. Your `~/.aws` directory will already be mounted to the
@@ -97,7 +91,9 @@ export AWS_SECRET_ACCESS_KEY=secret-key
 export AWS_REGION=us-east-1
 ```
 
-**Step 3: Create/Identify the SSH keypair for the Bastion host**
+### Create
+
+**Step 1: Create/Identify the SSH keypair for the Bastion host**
 
 *If you already have an AWS key pair that you would like to use, you can skip
 this step.*
@@ -114,7 +110,7 @@ IMPORTANT: The key pair `.pem` file should be in `~/.ssh` as this directory
 gets mounted to the environment for you. Also ensure that you set the
 permissions to `0400` as you would for any SSH key.
 
-**Step 4: Create your variable file**
+**Step 2: Create your variable file**
 
 There are several variables that you will need to define before running the
 deployment that are specific to your environment.
@@ -194,11 +190,11 @@ keypair_path: ~/.ssh/mykeypair.pem
 # Be sure to wrap its value in single quotes.
 pull_secret: ''
 
-# Install the cluster in FIPS mode 
-fips_mode: false 
+# Install the cluster in FIPS mode
+fips_mode: false
 ```
 
-**Step 5: Create your DNS records (Public Zone and NS record)**
+**Step 3: Create your DNS records (Public Zone and NS record)**
 
 > If you are running in **AWS GovCloud**, you can't create a public
 > zone because public zones are not supported yet. The automation will create a
@@ -228,15 +224,39 @@ to:
 
 ![](docs/images/route53_ns.png)
 
-**Step 6: Run the Ansible playbook**
+**Step 4: Run the automation**
 
-Execute the automation while passing in your variable file.
+Execute the automation to **create** your cluster.
 
 ```bash
-ansible-playbook -e @vars/ocp4.yml playbooks/create_cluster.yml -v
+./openshift-install create --vars-file vars/ocp4.yml
 ```
 
-#### Destroy
+### Start / Stop
+
+After your environment is provisioned, it's likely you'll want to shut it down
+when you're not using it and be able to start it back up when you need it.
+
+> **IMPORTANT:** You cannot shutdown your cluster until after it has been up
+> for at least 24 hours due to short-lived certificates that get rotated at the
+> 24 hour mark. There is a known workaround documented [here][24_hour_stop] but
+> has not beed added to this deployment yet.
+
+[24_hour_stop]: https://github.com/redhat-cop/openshift-lab-origin/blob/master/OpenShift4/Stopping_and_Resuming_OCP4_Clusters.adoc
+
+Execute the automation to **start** your cluster.
+
+```bash
+./openshift-deploy start --vars-file vars/ocp4.yml
+```
+
+Execute the automation to **stop** your cluster.
+
+```bash
+./openshift-deploy stop --vars-file vars/ocp4.yml
+```
+
+### Destroy
 
 Once you no longer need your cluster, you can use the automation to destroy
 your cluster.
@@ -245,25 +265,38 @@ Be sure to execute the automation from the same machine where you created the
 cluster as there is Terraform state data that is required to clean up all of
 the resources previously created.
 
-**Step 1: Enter the container environment**
+Execute the automation to **destroy** your cluster.
 
-Change your current directory to the cloned repository.
 
 ```bash
-cd openshift4-deploy/
+./openshift-deploy destroy --vars-file vars/ocp4.yml
 ```
 
-Activate a shell inside the container image provided.
+### Cluster Information
+
+When the automation to create a cluster completes, you are given output that
+describes information about the cluster you just deployed. Sometimes it's
+useful to get this information again.
+
+> **NOTE:** Your cluster must be running for this to work. It requires
+> connecting to your bastion host to pull important information about your
+> cluster.
+
+Execute the automation to display **information** about your cluster.
+
+```bash
+./openshift-deploy info --vars-file vars/ocp4.yml
+```
+
+### Shell
+
+If you are trying to troubleshoot, make modifications to the automation, or
+anything else that may require you to have access to an environment with all of
+the software dependencies already available, you can open a shell into the
+containerized environment.
+
+Open a **shell** inside the containerized environment.
 
 ```bash
 ./openshift-deploy shell
-```
-
-**Step 6: Run the Ansible playbook**
-
-Execute the automation while passing in your variable file.
-
-
-```bash
-ansible-playbook -e @vars/ocp4.yml playbooks/destroy_cluster.yml -v
 ```

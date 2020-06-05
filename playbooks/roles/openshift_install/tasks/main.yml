@@ -67,7 +67,7 @@
 
 - name: Remove bootstrap machine
   ec2_instance:
-    instance_ids: "{{ terraform_outputs.bootstrap.value.id }}"
+    instance_ids: "{{ hostvars.bootstrap.instance_id }}"
     state: absent
   delegate_to: localhost
   when: cloud in ['aws', 'aws_govcloud']

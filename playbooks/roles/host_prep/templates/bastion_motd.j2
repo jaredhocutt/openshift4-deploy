@@ -8,10 +8,9 @@
 
 Cluster Details:
 
-bootstrap  {{ terraform_outputs.bootstrap.value.private_ip }}
-{% for master in terraform_outputs.masters.value %}
-master{{ loop.index0 }}    {{ master.private_ip }}
+{% for master in groups.masters %}
+master{{ loop.index0 }}    {{ hostvars[master].ip_address }}
 {% endfor %}
-{%- for worker in terraform_outputs.workers.value %}
-worker{{ loop.index0 }}    {{ worker.private_ip }}
+{%- for worker in groups.workers %}
+worker{{ loop.index0 }}    {{ hostvars[worker].ip_address }}
 {% endfor %}
