@@ -229,7 +229,7 @@ to:
 Execute the automation to **create** your cluster.
 
 ```bash
-./openshift-install create --vars-file vars/ocp4.yml
+./openshift-deploy create --vars-file vars/ocp4.yml
 ```
 
 ### Start / Stop
