@@ -7,3 +7,4 @@ cluster_id: "{{ cluster_name }}-{{ base_domain | replace('.', '-') }}"
 cluster_domain: "{{ cluster_name }}.{{ base_domain }}"
 
 vpc_cidr: 172.31.0.0/16
+route53_default_hosted_zone_name: "{{ cluster_domain }}."
