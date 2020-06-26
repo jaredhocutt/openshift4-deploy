@@ -4,10 +4,6 @@ provider "aws" {}
 # Data
 ###############################################################################
 
-data "aws_route53_zone" "public" {
-  name = var.cluster_domain
-}
-
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -828,7 +824,7 @@ resource "aws_instance" "workers" {
 ###############################################################################
 
 resource "aws_route53_record" "api" {
-  zone_id = data.aws_route53_zone.public.zone_id
+  zone_id = var.route53_hosted_zone_id
   name    = "api"
   type    = "CNAME"
   ttl     = "300"
@@ -836,7 +832,7 @@ resource "aws_route53_record" "api" {
 }
 
 resource "aws_route53_record" "apps" {
-  zone_id = data.aws_route53_zone.public.zone_id
+  zone_id = var.route53_hosted_zone_id
   name    = "*.apps"
   type    = "CNAME"
   ttl     = "300"

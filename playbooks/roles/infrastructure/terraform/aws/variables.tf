@@ -25,3 +25,7 @@ variable "rhcos_ami" {
 variable "keypair_name" {
   type = string
 }
+
+variable "route53_hosted_zone_id" {
+  type = string
+}

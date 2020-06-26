@@ -52,5 +52,18 @@ keypair_path: ~/.ssh/mykeypair.pem
 # Be sure to wrap its value in single quotes.
 pull_secret: ''
 
+###############################################################################
+# Optional Variables
+###############################################################################
+
 # Install the cluster in FIPS mode
 fips_mode: false
+
+# The ID of the Route53 Hosted Zone to create public DNS entries.
+#
+# By default, the automation will assume a zone named
+# `{{ cluster_name }}.{{ base_domain }}` is already configured if you do not
+# define this value.
+#
+# Note: This is only relevant for AWS commercial regions.
+route53_hosted_zone_id: ABCDEF123456
