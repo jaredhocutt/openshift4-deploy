@@ -136,6 +136,6 @@ aws ec2 register-image \
    --ena-support \
    --name "rhcos-4.3.8-x86_64-aws.x86_64" \
    --virtualization-type hvm \
-   --root-device-name '/dev/sda1' \
-   --block-device-mappings 'DeviceName=/dev/sda1,Ebs={DeleteOnTermination=true,SnapshotId=snap-06331325870076318}'
+   --root-device-name '/dev/xvda' \
+   --block-device-mappings 'DeviceName=/dev/xvda,Ebs={DeleteOnTermination=true,SnapshotId=snap-06331325870076318}'
 ```
