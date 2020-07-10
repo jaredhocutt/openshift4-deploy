@@ -74,9 +74,10 @@ class OpenShiftDeploy(object):
             '--rm',
             '--pull', 'always' if not self.skip_update else 'missing',
             '--hostname', 'openshift4-deploy',
-            '--volume', '{}:/root/.ssh:z'.format(self.ssh_keys_dir),
-            '--volume', '{}:/root/.aws:z'.format(self.aws_credentials_dir),
-            '--volume', '{}:/app:z'.format(BASE_DIR),
+            '--security-opt', 'label=disable',
+            '--volume', '{}:/root/.ssh'.format(self.ssh_keys_dir),
+            '--volume', '{}:/root/.aws'.format(self.aws_credentials_dir),
+            '--volume', '{}:/app'.format(BASE_DIR),
         ]
 
         # Inject environment variables from host that are used for running the
