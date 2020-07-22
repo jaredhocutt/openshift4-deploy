@@ -8,9 +8,11 @@ This project provides a container image that includes all of the dependencies
 required to run the automation. To run the container image, you will need
 either `podman` or `docker` installed on your system.
 
-To install `podman`, follow the instructions here: https://podman.io/getting-started/installation.html
+To install `podman`, follow the instructions here:
+https://podman.io/getting-started/installation.html
 
-To install `docker`, follow the instructions here: https://docs.docker.com/get-docker/
+To install `docker`, follow the instructions here:
+https://docs.docker.com/get-docker/
 
 **Step 2**
 
@@ -78,34 +80,29 @@ permissions to `0600` as you would for any SSH key.
 There are several variables that you will need to define before running the
 deployment that are specific to your environment.
 
-| Variable            | Required           | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------- | ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `base_domain`       | :heavy_check_mark: |         | The base domain of the cluster.<br><br>All DNS will be sub-domains of this `base_domain` and include the `cluster_name`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `cloud`             | :heavy_check_mark: |         | The cloud provider to deploy to.<br><br>You should set this to `aws` to deploy to AWS and `aws_govcloud` to deploy to AWS GovCloud.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `cluster_name`      | :heavy_check_mark: |         | The cluster name.<br><br>This value will be in your DNS entries and should conform to valid DNS characters.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `keypair_name`      | :heavy_check_mark: |         | The name of the AWS key pair to use for the bastion host.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `keypair_path`      | :heavy_check_mark: |         | The path to the private key for your AWS key pair.<br><br>Note: The private key's integrity will be maintained. It is only used by Ansible to connect to the bastion host.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `openshift_version` | :heavy_check_mark: |         | The OpenShift version to install.<br><br>The version must include the z-stream (e.g. 4.3.18)  The list of versions can be found [here][openshift_versions]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `pull_secret`       | :heavy_check_mark: |         | The content of your pull secret, which can be found [here][pull_secret]. Be sure to wrap its value in single quotes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `fips_mode`         | :heavy_check_mark: |         | Set to True to install a cluster that has FIPS-validation enabled                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `rhcos_ami`         | :heavy_check_mark: |         | The AMI ID for RHCOS.<br><br>If you are deploying into a commercial AWS region, the AMI ID can be found [here][rhcos_ami_ids]. Be sure the documentation you are looking at matches the version of OpenShift you are deploying to get the correct AMI IDs.<br><br>If you are deploying in AWS GovCloud, you will need to upload the RHCOS image and create your own AMI. After doing so, you can use that AMI ID for this variable. You can find details for creating a RHCOS AMI [here](docs/rhcos.md).<br><br>The intention is to add support to have this variable default to a sensible value, but at the moment you will need to provide the AMI ID.    |
+| Variable            | Required           | Default | Description                                                                                                                                                                                                                                                                                                                                              |
+| ------------------- | ------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base_domain`       | :heavy_check_mark: |         | The base domain of the cluster.<br><br>All DNS will be sub-domains of this `base_domain` and include the `cluster_name`.                                                                                                                                                                                                                                 |
+| `cloud`             | :heavy_check_mark: |         | The cloud provider to deploy to.<br><br>You should set this to `aws`.                                                                                                                                                                                                                                                                                    |
+| `cluster_name`      | :heavy_check_mark: |         | The cluster name.<br><br>This value will be in your DNS entries and should conform to valid DNS characters.                                                                                                                                                                                                                                              |
+| `keypair_name`      | :heavy_check_mark: |         | The name of the AWS key pair to use for the bastion host.                                                                                                                                                                                                                                                                                                |
+| `keypair_path`      | :heavy_check_mark: |         | The path to the private key for your AWS key pair.<br><br>Note: The private key's integrity will be maintained. It is only used by Ansible to connect to the bastion host.                                                                                                                                                                               |
+| `openshift_version` | :heavy_check_mark: |         | The OpenShift version to install.<br><br>The version must include the z-stream (e.g. 4.5.2).<br><br>The list of versions can be found [here][openshift_versions].                                                                                                                                                                                        |
+| `pull_secret`       | :heavy_check_mark: |         | The content of your pull secret, which can be found [here][pull_secret]. Be sure to wrap its value in single quotes.                                                                                                                                                                                                                                     |
+| `fips_mode`         |                    | `false` | Set to `true` to install a cluster that has FIPS-validation enabled.                                                                                                                                                                                                                                                                                     |
+| `rhcos_ami`         | :heavy_check_mark: |         | The AMI ID for RHCOS.<br><br>The AMI ID can be found [here][rhcos_ami_ids]. Be sure the documentation you are looking at matches the version of OpenShift you are deploying to get the correct AMI ID.<br><br>The intention is to add support to have this variable default to a sensible value, but at the moment you will need to provide the AMI ID. |
 
 [pull_secret]: https://cloud.redhat.com/openshift/install/pull-secret
 [openshift_versions]: http://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/
 [rhcos_ami_ids]: https://docs.openshift.com/container-platform/latest/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
 
-Create a variable file at `<openshift4-deploy>/vars/ocp4.yml`. An example file
-matching the content below can be found at
-`<openshift4-deploy>/vars/aws.example.yml`.
+Create a variable file at `vars/ocp4.yml`. An example file matching the content
+below can be found at `vars/aws.example.yml`.
 
 ```yaml
 ---
 
 # The cloud provider to deploy to.
-#
-# The possible options are:
-#   aws
-#   aws_govcloud
 cloud: aws
 
 # The OpenShift version to install.
@@ -114,7 +111,7 @@ cloud: aws
 #
 # The list of versions can be found at
 # http://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/
-openshift_version: 4.4.3
+openshift_version: 4.5.2
 
 # The cluster name.
 #
@@ -128,13 +125,8 @@ base_domain: example.com
 
 # The AMI ID for RHCOS.
 #
-# If you are deploying into a commercial AWS region, the AMI ID can be found
-# here. Be sure the documentation you are looking at matches the version of
-# OpenShift you are deploying to get the correct AMI IDs.
-#
-# If you are deploying in AWS GovCloud, you will need to upload the RHCOS image
-# and create your own AMI. After doing so, you can use that AMI ID for this
-# variable. You can find details for creating a RHCOS AMI here.
+# The AMI ID can be found here. Be sure the documentation you are looking at
+# matches the version of OpenShift you are deploying to get the correct AMI ID.
 #
 # The intention is to add support to have this variable default to a sensible
 # value, but at the moment you will need to provide the AMI ID.
@@ -152,24 +144,18 @@ keypair_path: ~/.ssh/mykeypair.pem
 #
 # Be sure to wrap its value in single quotes.
 pull_secret: ''
-
-# Install the cluster in FIPS mode
-fips_mode: false
 ```
 
 **Step 3: Create your DNS records (Public Zone and NS record)**
-
-> If you are running in **AWS GovCloud**, you can't create a public
-> zone because public zones are not supported yet. The automation will create a
-> private zone for you. Proceed to the next step.
 
 Log into the AWS console and create a public Route53 Hosted Zone for your
 cluster.
 
 The name **MUST** match the format `{{ cluster_name }}.{{ base_domain }}` using
-the values you specified for those in your variable file. For example, if
-`cluster_name` is `ocp4` and `base_domain` is `cloud.example.com`, then your
-hosted zone should be `ocp4.cloud.example.com`.
+the values you specified for those in your variable file.
+
+For example, if `cluster_name` is `ocp4` and `base_domain` is
+`cloud.example.com`, then your hosted zone should be `ocp4.cloud.example.com`.
 
 After you create your hosted zone, you should see something similar to:
 
@@ -197,8 +183,9 @@ Execute the automation to **create** your cluster.
 
 ## Start / Stop
 
-After your environment is provisioned, it's likely you'll want to shut it down
-when you're not using it and be able to start it back up when you need it.
+If you are using this cluster for demonstration purposes, it's likely you'll
+want to shut it down when you're not using it and be able to start it back up
+when you need it.
 
 > **IMPORTANT:** You cannot shutdown your cluster until after it has been up
 > for at least 24 hours due to short-lived certificates that get rotated at the
@@ -224,10 +211,6 @@ Execute the automation to **stop** your cluster.
 Once you no longer need your cluster, you can use the automation to destroy
 your cluster.
 
-Be sure to execute the automation from the same machine where you created the
-cluster as there is Terraform state data that is required to clean up all of
-the resources previously created.
-
 Execute the automation to **destroy** your cluster.
 
 
@@ -237,7 +220,7 @@ Execute the automation to **destroy** your cluster.
 
 ## Cluster Information
 
-When the automation to create a cluster completes, you are given output that
+When the automation to create a cluster completes, you were given output that
 describes information about the cluster you just deployed. Sometimes it's
 useful to get this information again.
 
