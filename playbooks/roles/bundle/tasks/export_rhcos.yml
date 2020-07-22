@@ -1,0 +1,33 @@
+---
+
+- name: Create RHCOS download directory
+  file:
+    path: "{{ bundle_rhcos_dir }}"
+    state: directory
+
+- name: Get RHCOS release data
+  get_url:
+    url: https://raw.githubusercontent.com/openshift/installer/release-{{ openshift_version_major }}.{{ openshift_version_minor }}/data/data/rhcos.json
+    dest: "{{ bundle_rhcos_dir }}/rhcos-{{ openshift_version_major }}.{{ openshift_version_minor }}.json"
+    tmp_dest: "{{ bundle_rhcos_dir }}"
+
+- name: Read RHCOS release data
+  slurp:
+    src: "{{ bundle_rhcos_dir }}/rhcos-{{ openshift_version_major }}.{{ openshift_version_minor }}.json"
+  register: r_rhcos_release_data
+
+- name: Decode RHCOS release data
+  set_fact:
+    rhcos_release_data_json: "{{ r_rhcos_release_data.content | b64decode | from_json }}"
+
+- name: Check for RHCOS image
+  stat:
+    path: "{{ bundle_rhcos_dir }}/{{ rhcos_release_data_json | json_query('images.aws.path') }}"
+  register: r_stat_rhcos_image
+
+- name: Download RHCOS image (this may take a while)
+  get_url:
+    url: "{{ rhcos_release_data_json | json_query('baseURI') }}{{ rhcos_release_data_json | json_query('images.aws.path') }}"
+    dest: "{{ bundle_rhcos_dir }}/{{ rhcos_release_data_json | json_query('images.aws.path') }}"
+    tmp_dest: "{{ bundle_rhcos_dir }}"
+  when: not r_stat_rhcos_image.stat.exists

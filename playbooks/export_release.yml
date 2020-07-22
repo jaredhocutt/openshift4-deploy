@@ -1,0 +1,7 @@
+---
+
+- hosts: localhost
+  tasks:
+    - import_role:
+        name: bundle
+        tasks_from: export_release

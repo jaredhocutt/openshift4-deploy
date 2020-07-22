@@ -1,0 +1,22 @@
+---
+
+- name: Output pull secret to temporary file
+  copy:
+    content: "{{ pull_secret }}"
+    dest: /tmp/pull-secret.json
+
+- name: Create release mirror directory
+  file:
+    path: "{{ bundle_release_dir }}"
+    state: directory
+
+- name: Mirror OpenShift {{ openshift_version }} release image to disk
+  shell: >-
+    oc adm release mirror
+    {{ openshift_version }}
+    --registry-config /tmp/pull-secret.json
+    --to-dir "{{ bundle_release_dir }}"
+  retries: 3
+  delay: 2
+  until: r_mirror_openshift_release is not failed
+  register: r_mirror_openshift_release

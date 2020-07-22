@@ -1,0 +1,12 @@
+---
+# defaults file for bundle
+
+bundle_dir: /mnt/bundle
+bundle_images_dir: "{{ bundle_dir }}/images"
+bundle_release_dir: "{{ bundle_dir }}/release"
+bundle_rhcos_dir: "{{ bundle_dir }}/rhcos"
+bundle_archive_file: "{{ bundle_dir }}/bundle.tar"
+
+openshift_version_major: "{{ openshift_version.split('.')[0] }}"
+openshift_version_minor: "{{ openshift_version.split('.')[1] }}"
+openshift_version_zstream: "{{ openshift_version.split('.')[2] }}"
