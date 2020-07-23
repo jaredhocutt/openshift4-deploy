@@ -1,10 +1,6 @@
 ---
 
 # The cloud provider to deploy to.
-#
-# The possible options are:
-#   aws
-#   aws_govcloud
 cloud: aws
 
 # The OpenShift version to install.
@@ -13,7 +9,7 @@ cloud: aws
 #
 # The list of versions can be found at
 # http://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/
-openshift_version: 4.4.3
+openshift_version: 4.5.2
 
 # The cluster name.
 #
@@ -27,13 +23,8 @@ base_domain: example.com
 
 # The AMI ID for RHCOS.
 #
-# If you are deploying into a commercial AWS region, the AMI ID can be found
-# here. Be sure the documentation you are looking at matches the version of
-# OpenShift you are deploying to get the correct AMI IDs.
-#
-# If you are deploying in AWS GovCloud, you will need to upload the RHCOS image
-# and create your own AMI. After doing so, you can use that AMI ID for this
-# variable. You can find details for creating a RHCOS AMI here.
+# The AMI ID can be found here. Be sure the documentation you are looking at
+# matches the version of OpenShift you are deploying to get the correct AMI ID.
 #
 # The intention is to add support to have this variable default to a sensible
 # value, but at the moment you will need to provide the AMI ID.
@@ -51,6 +42,3 @@ keypair_path: ~/.ssh/mykeypair.pem
 #
 # Be sure to wrap its value in single quotes.
 pull_secret: ''
-
-# Install the cluster in FIPS mode
-fips_mode: false

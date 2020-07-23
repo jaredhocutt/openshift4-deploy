@@ -4,7 +4,8 @@
 
 vars/*
 !vars/.gitkeep
-!vars/aws.example.yml
+!vars/example.aws.yml
+!vars/example.aws_govcloud.yml
 
 .ansible/
 

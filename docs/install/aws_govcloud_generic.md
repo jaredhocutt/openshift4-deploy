@@ -97,7 +97,7 @@ deployment that are specific to your environment.
 [rhcos_ami_ids]: https://docs.openshift.com/container-platform/latest/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
 
 Create a variable file at `vars/ocp4.yml`. An example file matching the content
-below can be found at `vars/aws.example.yml`.
+below can be found at `vars/example.aws_govcloud.yml`.
 
 ```yaml
 ---
