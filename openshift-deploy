@@ -64,7 +64,9 @@ if __name__ == '__main__':
             'Please install one of those options and try again.'
         ]))
 
-    if known_args.action == 'shell':
+    if known_args.action == 'build':
+        od.build()
+    elif known_args.action == 'shell':
         od.shell()
     elif known_args.action == 'bundle':
         if known_args.bundle_action == 'export':

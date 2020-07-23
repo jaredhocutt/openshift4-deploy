@@ -16,6 +16,7 @@ class OpenShiftDeployCLI(object):
         self.subparsers = self.parser.add_subparsers()
         self.parent_parser = self._parent_parser()
 
+        self.add_subparser_build()
         self.add_subparser_shell()
         self.add_subparser_bundle()
         self.add_subparser_create()
@@ -31,19 +32,6 @@ class OpenShiftDeployCLI(object):
         subparser that inherets it.
         """
         parser = argparse.ArgumentParser(add_help=False)
-
-        # parser.add_argument(
-        #     '--log-level',
-        #     choices=[
-        #         logging.getLevelName(logging.ERROR),
-        #         logging.getLevelName(logging.WARNING),
-        #         logging.getLevelName(logging.INFO),
-        #         logging.getLevelName(logging.DEBUG),
-        #     ],
-        #     default=logging.getLevelName(logging.ERROR),
-        #     type=str.upper,
-        #     help='set the log level'
-        # )
         parser.add_argument(
             '--vars-file',
             required=True,
@@ -66,6 +54,14 @@ class OpenShiftDeployCLI(object):
         parser.set_defaults(action=name)
         return parser
 
+    def add_subparser_build(self):
+        """
+        Add subparer for build.
+        """
+        self.add_subparser(
+            'build',
+            help='build the container image'
+        )
 
     def add_subparser_shell(self):
         """
