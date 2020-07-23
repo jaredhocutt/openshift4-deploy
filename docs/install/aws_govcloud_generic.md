@@ -163,7 +163,7 @@ when you need it.
 > **IMPORTANT:** You cannot shutdown your cluster until after it has been up
 > for at least 24 hours due to short-lived certificates that get rotated at the
 > 24 hour mark. There is a known workaround documented [here][24_hour_stop] but
-> has not beed added to this deployment yet.
+> has not been added to this deployment yet.
 
 [24_hour_stop]: https://github.com/redhat-cop/openshift-lab-origin/blob/master/OpenShift4/Stopping_and_Resuming_OCP4_Clusters.adoc
 
