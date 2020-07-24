@@ -1,5 +1,11 @@
 ---
 
+- import_tasks: route53_info.yml
+  when: route53_hosted_zone_id is undefined
+
+- import_tasks: rhcos_ami_info.yml
+  when: rhcos_ami is undefined
+
 - name: Build infrastructure using Terraform
   terraform:
     project_path: "{{ role_path }}/terraform/aws"
@@ -13,6 +19,7 @@
       vpc_cidr: "{{ vpc_cidr | default(omit) }}"
       rhcos_ami: "{{ rhcos_ami }}"
       keypair_name: "{{ keypair_name }}"
+      route53_hosted_zone_id: "{{ route53_hosted_zone_id }}"
     workspace: "{{ terraform_workspace }}"
   register: r_terraform_apply
 

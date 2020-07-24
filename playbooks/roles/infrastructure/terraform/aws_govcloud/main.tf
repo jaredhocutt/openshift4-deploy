@@ -839,7 +839,7 @@ resource "aws_route53_zone" "private" {
 
 resource "aws_route53_record" "api_private" {
   zone_id = aws_route53_zone.private.zone_id
-  name    = "api"
+  name    = "api.${var.cluster_domain}"
   type    = "CNAME"
   ttl     = "300"
   records = [aws_lb.masters_int.dns_name]
@@ -847,7 +847,7 @@ resource "aws_route53_record" "api_private" {
 
 resource "aws_route53_record" "apps_private" {
   zone_id = aws_route53_zone.private.zone_id
-  name    = "*.apps"
+  name    = "*.apps.${var.cluster_domain}"
   type    = "CNAME"
   ttl     = "300"
   records = [aws_lb.ingress.dns_name]
@@ -855,7 +855,7 @@ resource "aws_route53_record" "apps_private" {
 
 resource "aws_route53_record" "api_int" {
   zone_id = aws_route53_zone.private.zone_id
-  name    = "api-int"
+  name    = "api-int.${var.cluster_domain}"
   type    = "CNAME"
   ttl     = "300"
   records = [aws_lb.masters_int.dns_name]
@@ -865,7 +865,7 @@ resource "aws_route53_record" "etcd" {
   count = 3
 
   zone_id = aws_route53_zone.private.zone_id
-  name    = "etcd-${count.index}"
+  name    = "etcd-${count.index}.${var.cluster_domain}"
   type    = "A"
   ttl     = "300"
   records = [aws_instance.masters[count.index].private_ip]
@@ -873,7 +873,7 @@ resource "aws_route53_record" "etcd" {
 
 resource "aws_route53_record" "etcd_srv" {
   zone_id = aws_route53_zone.private.zone_id
-  name    = "_etcd-server-ssl._tcp"
+  name    = "_etcd-server-ssl._tcp.${var.cluster_domain}"
   type    = "SRV"
   ttl     = "300"
   records = [

@@ -1,5 +1,11 @@
 ---
 
+- import_tasks: route53_info.yml
+  when: route53_hosted_zone_id is undefined
+
+- import_tasks: rhcos_ami_info.yml
+  when: rhcos_ami is undefined
+
 - name: Destroy infrastructure using Terraform
   terraform:
     project_path: "{{ role_path }}/terraform/aws"
