@@ -1,0 +1,13 @@
+- name: Get RHCOS release data
+  uri:
+    url: https://raw.githubusercontent.com/openshift/installer/release-{{ openshift_version_major }}.{{ openshift_version_minor }}/data/data/rhcos.json
+    return_content: yes
+  register: r_rhcos_release_data
+
+- name: Capture availability zone info
+  aws_az_info: {}
+  register: r_az_info
+
+- name: Set RHCOS AMI ID
+  set_fact:
+    rhcos_ami: "{{ r_rhcos_release_data.json.amis[r_az_info.availability_zones.0.region_name].hvm }}"

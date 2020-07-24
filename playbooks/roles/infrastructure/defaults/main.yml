@@ -8,3 +8,7 @@ cluster_domain: "{{ cluster_name }}.{{ base_domain }}"
 
 vpc_cidr: 172.31.0.0/16
 route53_default_hosted_zone_name: "{{ cluster_domain }}."
+
+openshift_version_major: "{{ openshift_version.split('.')[0] }}"
+openshift_version_minor: "{{ openshift_version.split('.')[1] }}"
+openshift_version_zstream: "{{ openshift_version.split('.')[2] }}"
