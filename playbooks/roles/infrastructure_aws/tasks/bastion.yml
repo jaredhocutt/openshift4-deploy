@@ -1,0 +1,85 @@
+---
+
+- name: Find bastion AMI ID
+  ec2_ami_info:
+    owners: 309956199498
+    filters:
+      architecture: "x86_64"
+      name: "RHEL-8.2*"
+  register: r_bastion_amis
+
+- name: Capture latest AMI ID
+  set_fact:
+    bastion_ami_info: "{{ r_bastion_amis.images | sort(attribute='creation_date') | last }}"
+
+- name: Create bastion Security Group
+  ec2_group:
+    description: OpenShift Bastion security group
+    name: "{{ cluster_id }}-Bastion"
+    vpc_id: "{{ vpc_id }}"
+    tags:
+      Name: "{{ cluster_id }}-Bastion"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    rules:
+      - rule_desc: Allow SSH from VPC networks
+        proto: tcp
+        ports: 22
+        cidr_ip: "{{ vpc_cidr }}"
+      - rule_desc: Allow SSH from ALL
+        proto: tcp
+        ports: 22
+        cidr_ip: 0.0.0.0/0
+
+- name: Create a bastion instance
+  ec2_instance:
+    image_id: "{{ bastion_ami_info.image_id }}"
+    key_name: "{{ keypair_name }}"
+    instance_type: "{{ instance_type_bastion }}"
+    vpc_subnet_id: "{{ public_subnets | random }}"
+    network:
+      assign_public_ip: true
+    security_groups:
+      - "{{ cluster_id }}-Bastion"
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          volume_type: gp2
+          volume_size: "{{ root_volume_size_bastion }}"
+          delete_on_termination: yes
+    name: "{{ cluster_id }}-bastion"
+    tags:
+      OpenShiftClusterId: "{{ cluster_id }}"
+      OpenShiftRole: bastion
+    filters:
+      "tag:Name": "{{ cluster_id }}-bastion"
+      instance-state-name: [ "pending", "running", "shutting-down", "stopping", "stopped" ]
+    state: running
+    wait: no
+  register: r_create_bastion
+
+- name: Capture bastion instance ID
+  set_fact:
+    bastion_instance_id: "{{ r_create_bastion.instance_ids }}"
+
+- name: Find bastion's public IP address
+  ec2_instance_info:
+    instance_ids: "{{ bastion_instance_id }}"
+  register: r_bastion_info
+  no_log: true
+
+- name: Add bastion to inventory
+  add_host:
+    name: bastion
+    ansible_host: "{{ item.public_ip_address }}"
+    ansible_user: ec2-user
+    ansible_ssh_private_key_file: "{{ keypair_path }}"
+    ip_address: "{{ item.private_ip_address }}"
+    instance_id: "{{ item.instance_id }}"
+  loop: "{{ r_bastion_info.instances }}"
+  changed_when: no
+
+- name: Wait for the bastion to become ready (5 minute maximum)
+  wait_for_connection:
+    delay: 10
+    timeout: 300
+  delegate_to: bastion

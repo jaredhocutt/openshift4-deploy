@@ -1,0 +1,89 @@
+---
+
+- name: Find VPC ID
+  ec2_vpc_net_info:
+    filters:
+      "tag:OpenShiftClusterId": "{{ cluster_id }}"
+  register: r_vpc
+
+- name: Capture VPC ID
+  set_fact: 
+    vpc_id: "{{ r_vpc.vpcs.0.vpc_id }}"
+
+- name: Find NAT Gateways
+  ec2_vpc_nat_gateway_info:
+    filters:
+      "tag:OpenShiftClusterId": "{{ cluster_id }}"
+      state: [ "pending", "failed", "available" ]
+  register: r_nat_gateways
+
+- name: Remove NAT Gateways (this may take a while...)
+  ec2_vpc_nat_gateway:
+    release_eip: true
+    wait: yes
+    nat_gateway_id: "{{ item.nat_gateway_id }}"
+    state: absent
+  loop: "{{ r_nat_gateways.result }}"
+
+- name: Find Internet Gateway IDs
+  ec2_vpc_igw_info:
+    filters:
+      "tag:OpenShiftClusterId": "{{ cluster_id }}"
+  register: r_igw
+
+- name: Remove Internet Gateways
+  ec2_vpc_igw:
+    vpc_id: "{{ vpc_id }}"
+    tags:
+      OpenShiftClusterId: "{{ cluster_id }}"
+    state: absent
+
+- name: Find public Subnets
+  ec2_vpc_subnet_info:
+    filters:
+      "tag:OpenShiftClusterId": "{{ cluster_id }}"
+  register: r_public_subnets
+
+- name: Remove public and private Subnets
+  ec2_vpc_subnet:
+    map_public: true
+    az: "{{ item.id }}"
+    cidr: "{{ item.cidr_block }}"
+    vpc_id: "{{ vpc_id }}"
+    tags:
+      OpenShiftClusterId: "{{ cluster_id }}"
+    state: absent
+  loop: "{{ r_public_subnets.subnets }}"
+
+- name: Find Route Tables
+  ec2_vpc_route_table_info:
+    filters:
+      vpc-id: "{{ vpc_id }}"
+      "tag:OpenShiftClusterId": "{{ cluster_id }}"
+  register: r_route_tables
+
+- name: Remove Route Tables
+  ec2_vpc_route_table:
+    lookup: id
+    vpc_id: "{{ vpc_id }}"
+    route_table_id: "{{ item.id }}"
+    state: absent
+  loop: "{{ r_route_tables.route_tables }}"
+  ignore_errors: yes
+  # the "main" route table can't be deleted because of lingering associations
+  # it's ok, deleting the VPC will clean it up.
+
+- name: Remove DHCP Option Set
+  ec2_vpc_dhcp_option:
+    vpc_id: "{{ vpc_id }}"
+    tags:
+      OpenShiftClusterId: "{{ cluster_id }}"
+    state: absent
+
+- name: Remove VPC
+  ec2_vpc_net:
+    name: "{{ cluster_id }}"
+    cidr_block: "{{ vpc_cidr }}"
+    tags:
+      Name: "{{ cluster_id }}"
+    state: absent

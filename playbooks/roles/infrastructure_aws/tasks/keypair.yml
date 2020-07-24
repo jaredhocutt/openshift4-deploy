@@ -1,0 +1,22 @@
+---
+
+- name: Create keypair
+  ec2_key:
+    name: "{{ keypair_name }}"
+    force: false
+    state: present
+  register: r_create_keypair
+
+# I used this as a workaround when SELinux was causing the `copy` module to fail
+# - name: Write private key to disk
+#   shell: echo "{{ r_create_keypair.key.private_key }}" | tee {{ keypair_path }}/{{ keypair_name }}
+#   when: r_create_keypair.changed
+
+- name: Write private key to disk
+  copy:
+    content: "{{ r_create_keypair.key.private_key }}"
+    dest: "{{ keypair_path }}/{{ keypair_name }}"
+    owner: "{{ ansible_user_uid | int }}"
+    group: "{{ ansible_user_gid | int }}"
+    mode: 0600
+  when: r_create_keypair.changed

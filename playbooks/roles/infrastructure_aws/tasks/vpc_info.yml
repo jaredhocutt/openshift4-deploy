@@ -1,0 +1,68 @@
+---
+
+- name: Gather VPC information
+  ec2_vpc_net_info:
+    vpc_ids: "{{ vpc_id }}"
+  register: r_vpc_info
+
+- name: Ensure the VPC has DNS support and DNS hostnames enabled
+  assert:
+    that:
+      - r_vpc_info.vpcs.0.enable_dns_hostnames is true
+      - r_vpc_info.vpcs.0.enable_dns_support is true
+    fail_msg: |
+      ERROR: VPC {{ vpc_id }} is not configured properly for DNS support/hostnames
+      The VPC must be configured to use a private hosted zone
+      https://aws.amazon.com/premiumsupport/knowledge-center/vpc-enable-private-hosted-zone/
+
+
+      
+- name: Query private VPC subnets
+  ec2_vpc_subnet_info:
+    filters:
+      vpc-id: "{{ vpc_id }}"
+      "tag:Name": "{{ vpc_private_subnet_name_search }}"
+  register: r_private_subnet_ids
+
+- name: Make sure that we found three private subnets
+  assert:
+    that:
+      - r_private_subnet_ids.subnets.2 is defined
+    fail_msg: |
+      ERROR: Cannot find 3 or more private subnets with {{ vpc_private_subnet_name_search }} in their names
+
+- name: Create the private_subnet_id array
+  set_fact:
+    private_subnet_ids: "{{ private_subnet_ids|default([]) + [ item.subnet_id ] }}"
+  loop: "{{ r_private_subnet_ids.subnets }}"
+  no_log: true
+
+- name: Print private_subnet_ids
+  debug:
+    var: private_subnet_ids
+  
+
+
+- name: Query public VPC subnet
+  ec2_vpc_subnet_info:
+    filters:
+      vpc-id: "{{ vpc_id }}"
+      "tag:Name": "{{ vpc_public_subnet_name_search }}"
+  register: r_public_subnet_ids
+  
+- name: Make sure that we found one public subnets (for bootstrap)
+  assert:
+    that:
+      - r_public_subnet_ids.subnets.0 is defined
+    fail_msg: |
+      ERROR: Cannot find a public subnet with {{ vpc_public_subnet_name_search }} in it's name
+
+- name: Create the private_subnet_id array
+  set_fact:
+    public_subnet_ids: "{{ public_subnet_ids|default([]) + [ item.subnet_id ] }}"
+  loop: "{{ r_public_subnet_ids.subnets }}"
+  no_log: true
+
+- name: Print public_subnet_ids variable
+  debug:
+    var: public_subnet_ids

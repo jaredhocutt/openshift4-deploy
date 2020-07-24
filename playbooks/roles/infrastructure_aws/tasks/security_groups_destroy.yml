@@ -1,0 +1,29 @@
+---
+- name: "Query \"OpenShiftClusterId: {{ cluster_id }}\" security groups"
+  ec2_group_info:
+    filters:
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+  register: r_destroy_security_groups
+
+# Our SG's have circular dependencies:
+#   Control-SG has a rule permitting Worker-SG, and Worker-SG has a rule permitting Control-SG
+# We remove those rules (without changing the SG's name or description)
+# and then remove the mostly-empty SGs
+- name: "Remove all rules from \"OpenShiftClusterId: {{ cluster_id }}\" security groups"
+  ec2_group:
+    state: present
+    name: "{{ item.group_name }}"
+    description: "{{ item.description }}"
+    rules:
+      - rule_desc: Dummy rule to replace all other rules
+        proto: icmp
+        ports: 0
+        cidr_ip: 169.254.0.0/16
+  loop: "{{ r_destroy_security_groups.security_groups }}"
+        
+- name: "Remove \"OpenShiftClusterId: {{ cluster_id }}\" security groups"
+  ec2_group:
+    state: absent
+    group_id: "{{ item.group_id }}"
+  loop: "{{ r_destroy_security_groups.security_groups }}"
+    

@@ -1,0 +1,148 @@
+---
+
+#TODO: Figure out why this bootstrap instance task isn't idempotent
+#      repeated runs result in multiple bootstrap instances being created
+- name: Create bootstrap instance
+  ec2_instance:
+    instance_type: "{{ instance_type_bootstrap }}"
+    image_id: "{{ rhcos_ami }}"
+    vpc_subnet_id: "{{ public_subnets | random }}"
+    instance_role: "{{ ec2_instance_role_bootstrap | default(omit) }}"
+    # TODO: this user_data isn't in the right format
+    user_data: >
+      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/bootstrap.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
+    network:
+      assign_public_ip: true
+    security_groups:
+      - "{{ cluster_id }}-Bootstrap"
+      - "{{ cluster_id }}-Control"
+    #Removed this section because it wasn't in the example CloudFormation template
+    # volumes:
+    #   - device_name: /dev/sda1
+    #     ebs:
+    #       volume_type: gp2
+    #       volume_size: "{{ root_volume_size_bootstrap }}"
+    #       delete_on_termination: yes
+    name: "{{ cluster_id }}-bootstrap"
+    tags:
+      OpenShiftClusterId: "{{ cluster_id }}"
+      OpenShiftRole: bootstrap
+    filters:
+      tag:Name: "{{ cluster_id }}-bootstrap"
+      instance-state-name: [ "pending", "running", "shutting-down", "stopping", "stopped" ]
+    state: running
+    wait: no
+    state: present
+  register: r_create_bootstrap_instance
+
+- name: Create master instances
+  ec2_instance:
+    instance_type: "{{ instance_type_master }}"
+    image_id: "{{ rhcos_ami }}"
+    vpc_subnet_id: "{{ private_subnets[count] }}"
+    instance_role: "{{ ec2_instance_role_master | default(omit) }}"
+    user_data: >
+      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/master.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
+    network:
+      assign_public_ip: false
+    security_groups:
+      - "{{ cluster_id }}-Control"
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          volume_type: gp2
+          volume_size: "{{ root_volume_size_master }}"
+          delete_on_termination: yes
+    name: "{{ cluster_id }}-master-{{ '%02d' | format(count + 1) }}"
+    tags:
+      OpenShiftClusterId: "{{ cluster_id }}"
+      OpenShiftRole: master
+    filters:
+      tag:Name: "{{ cluster_id }}-master-{{ '%02d' | format(count + 1) }}"
+      instance-state-name: [ "pending", "running", "shutting-down", "stopping", "stopped" ]
+    state: running
+    wait: no
+    state: present
+  loop: [ 0, 1, 2 ] # OCP4 requires 3 masters
+  loop_control:
+    loop_var: count
+  register: r_create_master_instances
+
+- name: Create worker instances
+  ec2_instance:
+    instance_type: "{{ instance_type_worker }}"
+    image_id: "{{ rhcos_ami }}"
+    vpc_subnet_id: "{{ private_subnets[count] }}"
+    instance_role: "{{ ec2_instance_role_worker | default(omit) }}"
+    user_data: >
+      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/worker.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
+    network:
+      assign_public_ip: false
+    security_groups:
+      - "{{ cluster_id }}-Worker"
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          volume_type: gp2
+          volume_size: "{{ root_volume_size_worker }}"
+          delete_on_termination: yes
+      # TODO: add logic for static (aka bare metal) OCS deployments
+      #       we can avoid this if we eventually enable an AWS-integrated storageClass
+      # - device_name: /dev/sdb
+      #   ebs:
+      #     volume_type: gp2
+      #     volume_size: "{{ ocs_volume_size }}"
+    name: "{{ cluster_id }}-worker-{{ '%02d' | format(count + 1) }}"
+    tags:
+      OpenShiftClusterId: "{{ cluster_id }}"
+      OpenShiftRole: worker
+    filters:
+      tag:Name: "{{ cluster_id }}-worker-{{ '%02d' | format(count + 1) }}"
+      instance-state-name: [ "pending", "running", "shutting-down", "stopping", "stopped" ]
+    state: running
+    wait: no
+    state: present
+  loop: "{{ range(0, instance_count_worker) | list }}"
+  loop_control:
+    loop_var: count
+  register: r_create_worker_instances
+
+- name: Gather instance IDs
+  set_fact:
+    bootstrap_instance_id: "{{ r_create_bootstrap_instance.instance_ids }}"
+    master_instance_ids:   "{{ r_create_master_instances.results | map(attribute='instance_ids') | list | sum(start=[]) }}"
+    worker_instance_ids:   "{{ r_create_worker_instances.results | map(attribute='instance_ids') | list | sum(start=[]) }}"
+
+# NOTE: The _odd_ syntax for the tags is due to needing to have
+# a variable name in the tag key.
+- name: "Add kubernetes.io/cluster/{{ cluster_id }}:shared tag to instances"
+  ec2_tag:
+    resource: "{{ item }}"
+    tags: "{
+      'kubernetes.io/cluster/{{ cluster_id }}': 'shared'
+    }"
+    state: present
+  with_items:
+    - "{{ master_instance_ids }}"
+    - "{{ worker_instance_ids }}"
+
+# I'm doing this to capture the private_ip_address
+# But I may not need to do this if I target via instance-id in the LBs
+- name: Gather instance info from bootstrap instance
+  ec2_instance_info:
+    instance_ids: "{{ bootstrap_instance_id }}"
+  register: r_bootstrap_info
+
+- name: Gather instance info from master instance
+  ec2_instance_info:
+    instance_ids: "{{ master_instance_ids }}"
+  register: r_masters_info
+
+- name: Gather instance info from worker instance
+  ec2_instance_info:
+    instance_ids: "{{ worker_instance_ids }}"
+  register: r_workers_info
+
+- debug: var=r_bootstrap_info.instances.0.private_ip_address
+- debug: var=r_masters_info.instances.0.private_ip_address
+- debug: var=r_workers_info.instances.2.private_ip_address
