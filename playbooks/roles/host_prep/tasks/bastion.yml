@@ -50,7 +50,7 @@
       - httpd
       - python3
       - python3-pip
-      - screen
+      - "{{ (ansible_distribution_major_version == '8') | ternary('tmux', 'screen') }}"
       - unzip
       - vim
       - wget
