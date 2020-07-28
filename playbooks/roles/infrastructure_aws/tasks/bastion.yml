@@ -29,6 +29,10 @@
         proto: tcp
         ports: 22
         cidr_ip: 0.0.0.0/0
+      - rule_desc: Allow HTTP/Ignition from VPC networks
+        proto: tcp
+        ports: 80
+        cidr_ip: "{{ vpc_cidr }}"
 
 - name: Create a bastion instance
   ec2_instance:
@@ -80,6 +84,6 @@
 
 - name: Wait for the bastion to become ready (5 minute maximum)
   wait_for_connection:
-    delay: 10
     timeout: 300
   delegate_to: bastion
+  
