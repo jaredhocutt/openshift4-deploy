@@ -1,16 +1,16 @@
 ---
 
-#TODO: Figure out why this bootstrap instance task isn't idempotent
-#      repeated runs result in multiple bootstrap instances being created
 - name: Create bootstrap instance
+  vars:
+    user_data: |
+      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/bootstrap.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
   ec2_instance:
     instance_type: "{{ instance_type_bootstrap }}"
     image_id: "{{ rhcos_ami }}"
     vpc_subnet_id: "{{ public_subnets | random }}"
     instance_role: "{{ ec2_instance_role_bootstrap | default(omit) }}"
-    # TODO: this user_data isn't in the right format
-    user_data: >
-      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/bootstrap.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
+    #This user_data method stops Ansible/Python from changing the ignition data's double-quotes into single-quotes
+    user_data: "{{ user_data | to_json }}"
     network:
       assign_public_ip: true
     security_groups:
@@ -36,13 +36,15 @@
   register: r_create_bootstrap_instance
 
 - name: Create master instances
+  vars:
+    user_data: |
+      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/master.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
   ec2_instance:
     instance_type: "{{ instance_type_master }}"
     image_id: "{{ rhcos_ami }}"
     vpc_subnet_id: "{{ private_subnets[count] }}"
     instance_role: "{{ ec2_instance_role_master | default(omit) }}"
-    user_data: >
-      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/master.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
+    user_data: "{{ user_data | to_json }}"
     network:
       assign_public_ip: false
     security_groups:
@@ -69,13 +71,15 @@
   register: r_create_master_instances
 
 - name: Create worker instances
+  vars:
+    user_data: |
+      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/worker.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
   ec2_instance:
     instance_type: "{{ instance_type_worker }}"
     image_id: "{{ rhcos_ami }}"
     vpc_subnet_id: "{{ private_subnets[count] }}"
     instance_role: "{{ ec2_instance_role_worker | default(omit) }}"
-    user_data: >
-      {"ignition":{"config":{"replace":{"source":"http://{{ hostvars['bastion']['ip_address'] }}/worker.ign","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
+    user_data: "{{ user_data | to_json }}"
     network:
       assign_public_ip: false
     security_groups:
@@ -125,24 +129,3 @@
   with_items:
     - "{{ master_instance_ids }}"
     - "{{ worker_instance_ids }}"
-
-# I'm doing this to capture the private_ip_address
-# But I may not need to do this if I target via instance-id in the LBs
-- name: Gather instance info from bootstrap instance
-  ec2_instance_info:
-    instance_ids: "{{ bootstrap_instance_id }}"
-  register: r_bootstrap_info
-
-- name: Gather instance info from master instance
-  ec2_instance_info:
-    instance_ids: "{{ master_instance_ids }}"
-  register: r_masters_info
-
-- name: Gather instance info from worker instance
-  ec2_instance_info:
-    instance_ids: "{{ worker_instance_ids }}"
-  register: r_workers_info
-
-- debug: var=r_bootstrap_info.instances.0.private_ip_address
-- debug: var=r_masters_info.instances.0.private_ip_address
-- debug: var=r_workers_info.instances.2.private_ip_address
