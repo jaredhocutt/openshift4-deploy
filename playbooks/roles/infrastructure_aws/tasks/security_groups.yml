@@ -66,6 +66,15 @@
         proto: tcp
         ports: 22
         cidr_ip: "{{ vpc_cidr }}"
+      - rule_desc: Allow HTTP to the Router pods
+        proto: tcp
+        ports: 80
+        cidr_ip: 0.0.0.0/0
+      - rule_desc: Allow HTTPS to the Router pods
+        proto: tcp
+        ports: 443
+        cidr_ip: 0.0.0.0/0
+
   register: r_worker_sg
         
 - name: Add additional rules to the Control nodes' security group
@@ -82,28 +91,24 @@
         from_port: 2379
         to_port: 2380
         group_id: "{{ r_control_sg.group_id }}"
-
       - rule_desc: Allow VXLAN from Control & Worker SG
         proto: udp
         ports: 4789
         group_id:
           - "{{ r_control_sg.group_id }}"
           - "{{ r_worker_sg.group_id }}"
-
       - rule_desc: Allow internal cluster communication from Control & Worker SG
         proto: tcp
         ports: 9000-9999
         group_id:
           - "{{ r_control_sg.group_id }}"
           - "{{ r_worker_sg.group_id }}"
-
       - rule_desc: Allow kubelet, scheduler and controller manager from Control & Worker SG
         proto: tcp
         ports: 10250-10259
         group_id:
           - "{{ r_control_sg.group_id }}"
           - "{{ r_worker_sg.group_id }}"
-
       - rule_desc: Allow Kubernetes Ingress services from Control & Worker SG
         proto: tcp
         ports: 30000-32767
@@ -126,21 +131,18 @@
         group_id:
           - "{{ r_control_sg.group_id }}"
           - "{{ r_worker_sg.group_id }}"
-
       - rule_desc: Allow internal cluster communication from Control & Worker SG
         proto: tcp
         ports: 9000-9999
         group_id:
           - "{{ r_control_sg.group_id }}"
           - "{{ r_worker_sg.group_id }}"
-
       - rule_desc: Allow kubelet, scheduler and controller manager from Control & Worker SG
         proto: tcp
         ports: 10250-10250
         group_id:
           - "{{ r_control_sg.group_id }}"
           - "{{ r_worker_sg.group_id }}"
-
       - rule_desc: Allow Kubernetes Ingress services from Control & Worker SG
         proto: tcp
         ports: 30000-32767
