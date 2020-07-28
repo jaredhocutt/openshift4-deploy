@@ -69,9 +69,8 @@
     route_table_id: "{{ item.id }}"
     state: absent
   loop: "{{ r_route_tables.route_tables }}"
-  ignore_errors: yes
-  # the "main" route table can't be deleted because of lingering associations
-  # it's ok, deleting the VPC will clean it up.
+  when: not item | json_query('associations[?main==`true`]')
+  # the "main" route table will be deleted when the VPC is deleted
 
 - name: Remove DHCP Option Set
   ec2_vpc_dhcp_option:

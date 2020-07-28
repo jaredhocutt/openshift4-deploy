@@ -1,6 +1,0 @@
-{% if ignition_worker_certificates is defined %}}
-{"ignition":{"config":{"append":[{"source":"{{ ignition_worker_url }}","verification":{}}]},"security":{"tls":{"certificateAuthorities":[{"source":"{{ ignition_worker_certificates }}","verification":{}}]}},"timeouts":{},"version":"2.2.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
-{% else %}}
-{"ignition":{"config":{"replace":{"source":"{{ ignition_worker_url }}","verification":{}}},"timeouts":{},"version":"2.1.0"},"networkd":{},"passwd":{},"storage":{},"systemd":{}}
-{% endif %}}
-
