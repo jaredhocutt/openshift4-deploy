@@ -64,6 +64,8 @@
     vpc_id: "{{ vpc_id }}"
     target_type: instance
     targets:
+      - Id: "{{ bootstrap_instance_id.0 }}"
+        Port: 6443
       - Id: "{{ master_instance_ids.0 }}"
         Port: 6443
       - Id: "{{ master_instance_ids.1 }}"
@@ -85,6 +87,8 @@
     vpc_id: "{{ vpc_id }}"
     target_type: instance
     targets:
+      - Id: "{{ bootstrap_instance_id.0 }}"
+        Port: 22623
       - Id: "{{ master_instance_ids.0 }}"
         Port: 22623
       - Id: "{{ master_instance_ids.1 }}"
