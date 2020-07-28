@@ -129,3 +129,9 @@
   with_items:
     - "{{ master_instance_ids }}"
     - "{{ worker_instance_ids }}"
+
+# TODO: Change this registered variable to something else for route53.yml (etcd A records)
+- name: Gather instance info from master instance
+  ec2_instance_info:
+    instance_ids: "{{ master_instance_ids }}"
+  register: r_masters_info
