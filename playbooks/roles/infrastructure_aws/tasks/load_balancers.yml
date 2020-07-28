@@ -176,31 +176,10 @@
     - { port: "443", group: "{{ r_tg_https.target_group_name }}" }
   register: r_app_nlb
 
-- debug: var=r_api_nlb
-
-
 # Need these values later to create DNS entries
 - name: Save load balancer facts
   set_fact:
     api_nlb_arn: "{{ r_api_nlb.results.0.load_balancer_arn }}"
     app_nlb_arn: "{{ r_app_nlb.results.0.load_balancer_arn }}"
-
-- name: Find network interfaces for the API load balancer
-  ec2_eni_info:
-    filters:
-      description: ELB {{ api_nlb_arn | regex_replace('arn:\S+loadbalancer/', '') }}
-  register: r_find_api_nlb_network_interfaces
-
-- name: Find network interfaces for the app load balancer
-  ec2_eni_info:
-    filters:
-      description: ELB {{ app_nlb_arn | regex_replace('arn:\S+loadbalancer/', '') }}
-  register: r_find_app_nlb_network_interfaces
-
-- name: Save load balancer private IPs
-  set_fact:
-    api_nlb_private_ips: "{{ r_find_api_nlb_network_interfaces.network_interfaces | map(attribute='private_ip_address') | list }}"
-    app_nlb_private_ips: "{{ r_find_app_nlb_network_interfaces.network_interfaces | map(attribute='private_ip_address') | list }}"
-
-- debug: var=api_nlb_private_ips
-- debug: var=app_nlb_private_ips
+    api_nlb_dns_name: "{{ r_api_nlb.results.0.dns_name }}"
+    app_nlb_dns_name: "{{ r_app_nlb.results.0.dns_name }}"
