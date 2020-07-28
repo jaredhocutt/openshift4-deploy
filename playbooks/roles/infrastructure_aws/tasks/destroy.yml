@@ -20,3 +20,6 @@
 - import_tasks: security_groups_destroy.yml
 - import_tasks: keypair_destroy.yml
 - import_tasks: vpc_destroy.yml
+- import_tasks: route53_destroy.yml
+  tags: [route53]
+  

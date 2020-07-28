@@ -24,4 +24,8 @@
 - import_tasks: instances.yml
 - import_tasks: instances_info.yml
 - import_tasks: load_balancers.yml
+- import_tasks: route53_info.yml
+  when: route53_hosted_zone_id is undefined
+  tags: [route53]
 - import_tasks: route53.yml
+  tags: [route53]
