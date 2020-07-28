@@ -33,19 +33,16 @@
     rules:
       - rule_desc: Allow ICMP (pings) from VPC networks
         proto: icmp
-        ports: 0
+        ports: -1
         cidr_ip: "{{ vpc_cidr }}"
-
       - rule_desc: Allow SSH from VPC networks
         proto: tcp
         ports: 22
         cidr_ip: "{{ vpc_cidr }}"
-
       - rule_desc: Allow OpenShift API from VPC networks
         proto: tcp
         ports: 6443
         cidr_ip: "{{ vpc_cidr }}"
-
       - rule_desc: Allow Machine Configs from VPC networks
         proto: tcp
         ports: 22623
@@ -63,7 +60,7 @@
     rules:
       - rule_desc: Allow ICMP (pings) from VPC networks
         proto: icmp
-        ports: 0
+        ports: -1
         cidr_ip: "{{ vpc_cidr }}"
       - rule_desc: Allow SSH from VPC networks
         proto: tcp
