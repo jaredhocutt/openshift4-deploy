@@ -21,3 +21,5 @@ root_volume_size_worker: "{{ root_volume_size_master }}"
 root_volume_size_bootstrap: "{{ root_volume_size_master }}"
 
 ocs_volume_size: 400
+
+route53_default_hosted_zone_name: "{{ cluster_name }}.{{ base_domain }}."
