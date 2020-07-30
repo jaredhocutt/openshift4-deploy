@@ -31,7 +31,7 @@
       args:
         chdir: "{{ openshift_install_dir }}"
 
-    - name: Mark masters as not scheduleable
+    - name: Mark controllers as not scheduleable
       lineinfile:
         path: "{{ openshift_install_dir }}/manifests/cluster-scheduler-02-config.yml"
         regexp: '^(\s*mastersSchedulable:)'

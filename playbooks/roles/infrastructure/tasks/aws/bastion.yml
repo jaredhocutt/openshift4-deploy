@@ -1,0 +1,54 @@
+---
+
+- name: Create bastion instance
+  ec2_instance:
+    name: "{{ cluster_id }}-bastion"
+    image_id: "{{ rhel_ami }}"
+    key_name: "{{ keypair_name }}"
+    instance_type: "{{ ec2_instance_type_bastion }}"
+    vpc_subnet_id: "{{ public_subnet_ids.0 }}"
+    network:
+      assign_public_ip: yes
+    security_groups:
+      - "{{ cluster_id }}-bastion"
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          volume_type: gp2
+          volume_size: "{{ root_volume_size_bastion }}"
+          delete_on_termination: yes
+    tags:
+      Name: "{{ cluster_id }}-bastion"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+      OpenShiftRole: bastion
+    filters:
+      tag:Name: "{{ cluster_id }}-bastion"
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+      instance-state-name: ["pending", "running", "shutting-down", "stopping", "stopped"]
+    state: running
+    wait: yes
+  register: r_create_bastion
+
+- name: Create EIP for bastion
+  ec2_eip:
+    device_id: "{{ r_create_bastion.instances.0.instance_id }}"
+  register: r_create_eip_bastion
+
+- name: Add bastion to inventory
+  add_host:
+    name: bastion
+    ansible_host: "{{ r_create_eip_bastion.public_ip }}"
+    ansible_user: ec2-user
+    ansible_ssh_private_key_file: "{{ keypair_path }}"
+    private_ip_address: "{{ r_create_bastion.instances.0.private_ip_address }}"
+    instance_id: "{{ r_create_bastion.instances.0.instance_id }}"
+  changed_when: no
+
+- name: Wait for bastion to boot
+  wait_for:
+    host: "{{ r_create_eip_bastion.public_ip }}"
+    port: 22
+    search_regex: OpenSSH
+  delegate_to: localhost

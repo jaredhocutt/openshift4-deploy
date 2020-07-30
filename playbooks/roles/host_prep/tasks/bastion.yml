@@ -28,11 +28,11 @@
   blockinfile:
     path: /etc/hosts
     block: |
-      {% for master in groups.masters %}
-      {{ hostvars[master].ip_address }}  master{{ loop.index0 }}
+      {% for controller in groups.controllers %}
+      {{ hostvars[controller].private_ip_address }}  controller{{ loop.index0 }}
       {% endfor %}
       {%- for worker in groups.workers %}
-      {{ hostvars[worker].ip_address }}  worker{{ loop.index0 }}
+      {{ hostvars[worker].private_ip_address }}  worker{{ loop.index0 }}
       {% endfor %}
   become: yes
 

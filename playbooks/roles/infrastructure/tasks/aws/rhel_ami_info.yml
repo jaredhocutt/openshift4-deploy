@@ -1,0 +1,23 @@
+---
+
+- name: Set AMI owner (Commercial)
+  set_fact:
+    rhel_ami_owner: "{{ aws_commercial_rhel_ami_owner }}"
+  when: cloud == 'aws'
+
+- name: Set AMI owner (GovCloud)
+  set_fact:
+    rhel_ami_owner: "{{ aws_govcloud_rhel_ami_owner }}"
+  when: cloud == 'aws_govcloud'
+
+- name: Find RHEL AMIs
+  ec2_ami_info:
+    owners: "{{ rhel_ami_owner }}"
+    filters:
+      architecture: "x86_64"
+      name: "RHEL-8.2*"
+  register: r_find_rhel_amis
+
+- name: Set RHEL AMI
+  set_fact:
+    rhel_ami: "{{ (r_find_rhel_amis.images | sort(attribute='creation_date') | last).image_id }}"
