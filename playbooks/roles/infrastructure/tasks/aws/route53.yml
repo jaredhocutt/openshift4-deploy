@@ -15,7 +15,9 @@
     - name: Set hosted zone name
       set_fact:
         route53_hosted_zone_name: "{{ r_capture_public_hosted_zone.HostedZone.Name }}"
-  when: route53_hosted_zone_id is defined
+  when:
+    - cloud == 'aws'
+    - route53_hosted_zone_id is defined
 
 - name: Create public DNS records
   route53:
@@ -33,6 +35,7 @@
     - record: "*.apps"
       value: "{{ r_create_ingress_lb.dns_name }}"
       type: CNAME
+  when: cloud == 'aws'
 
 - name: Create private DNS zone
   route53_zone:
@@ -41,16 +44,29 @@
     vpc_region: "{{ r_az_info.availability_zones.0.region_name }}"
   register: r_create_private_dns_zone
 
+# Ansible STILL doesn't support AWS GovCloud becuase modules use the outdated
+# boto libraries
 - name: Create private DNS records
-  route53:
-    hosted_zone_id: "{{ r_create_private_dns_zone.zone_id }}"
-    record: "{{ item.record }}.{{ cluster_domain }}"
-    value: "{{ item.value }}"
-    type: "{{ item.type }}"
-    ttl: 60
-    overwrite: yes
-    private_zone: yes
-    state: present
+  command: >-
+    aws route53 change-resource-record-sets
+    --hosted-zone-id {{ r_create_private_dns_zone.zone_id }}
+    --change-batch '{
+      "Changes": [
+        {
+          "Action": "UPSERT",
+          "ResourceRecordSet": {
+            "Name": "{{ item.record }}.{{ cluster_domain }}",
+            "Type": "{{ item.type }}",
+            "TTL": 60,
+            "ResourceRecords": [
+              {
+                "Value": "{{ item.value }}"
+              }
+            ]
+          }
+        }
+      ]
+    }'
   loop:
     - record: api
       value: "{{ r_create_external_api_lb.dns_name }}"
@@ -70,9 +86,33 @@
     - record: etcd-2
       value: "{{ hostvars.controller2.private_ip_address }}"
       type: A
-    - record: _etcd-server-ssl._tcp
-      value: >-
-        0 10 2380 etcd-0.{{ cluster_domain }}.,
-        0 10 2380 etcd-1.{{ cluster_domain }}.,
-        0 10 2380 etcd-2.{{ cluster_domain }}.
-      type: SRV
+
+# There isn't a clean way to include creating the SRV record in the same way as
+# the task above, so making it a separate task for readability.
+- name: Create private SRV DNS records
+  command: >-
+    aws route53 change-resource-record-sets
+    --hosted-zone-id {{ r_create_private_dns_zone.zone_id }}
+    --change-batch '{
+      "Changes": [
+        {
+          "Action": "UPSERT",
+          "ResourceRecordSet": {
+            "Name": "_etcd-server-ssl._tcp.{{ cluster_domain }}",
+            "Type": "SRV",
+            "TTL": 60,
+            "ResourceRecords": [
+              {
+                "Value": "0 10 2380 etcd-0.{{ cluster_domain }}."
+              },
+              {
+                "Value": "0 10 2380 etcd-1.{{ cluster_domain }}."
+              },
+              {
+                "Value": "0 10 2380 etcd-2.{{ cluster_domain }}."
+              }
+            ]
+          }
+        }
+      ]
+    }'

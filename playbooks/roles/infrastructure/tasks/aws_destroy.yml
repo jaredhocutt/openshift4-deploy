@@ -34,7 +34,9 @@
     - name: Set hosted zone name
       set_fact:
         route53_hosted_zone_name: "{{ r_capture_public_hosted_zone.HostedZone.Name }}"
-  when: route53_hosted_zone_id is defined
+  when:
+    - cloud == 'aws'
+    - route53_hosted_zone_id is defined
 
 - name: Capture public DNS entries
   route53:
@@ -49,6 +51,7 @@
     - record: "*.apps"
       type: CNAME
   register: r_capture_public_dns_records
+  when: cloud == 'aws'
 
 - name: Destroy public DNS entries
   route53:
@@ -59,44 +62,57 @@
     ttl: "{{ item.set.ttl }}"
     state: absent
   loop: "{{ r_capture_public_dns_records.results }}"
-  when: item.set.value is defined
+  when:
+    - cloud == 'aws'
+    - item.set.value is defined
 
-- name: Capture private DNS entries
-  route53:
-    zone: "{{ cluster_domain }}"
-    record: "{{ item.record }}.{{ cluster_domain }}"
-    type: "{{ item.type }}"
-    private_zone: yes
-    state: get
-  loop:
-    - record: api
-      type: CNAME
-    - record: api-int
-      type: CNAME
-    - record: "*.apps"
-      type: CNAME
-    - record: etcd-0
-      type: A
-    - record: etcd-1
-      type: A
-    - record: etcd-2
-      type: A
-    - record: _etcd-server-ssl._tcp
-      type: SRV
-  register: r_capture_private_dns_records
-  ignore_errors: yes
+- name: Capture hosted zones
+  route53_info:
+    query: hosted_zone
+    hosted_zone_method: list
+    max_items: "99999"
+  register: r_capture_hosted_zones
 
-- name: Destroy private DNS entries
-  route53:
-    zone: "{{ cluster_domain }}"
-    record: "{{ item.set.record }}"
-    value: "{{ item.set.value }}"
-    type: "{{ item.set.type }}"
-    ttl: "{{ item.set.ttl }}"
-    private_zone: yes
-    state: absent
-  loop: "{{ r_capture_private_dns_records.results }}"
-  when: item.set.value is defined
+- name: Set private hosted zone ID
+  set_fact:
+    route53_private_hosted_zone_id: "{{ r_capture_hosted_zones | json_query('HostedZones[?Config.PrivateZone==`true` && Name==`' + cluster_domain + '.`].Id | [0]') | default('', true) | replace('/hostedzone/', '') }}"
+
+# Ansible STILL doesn't support AWS GovCloud becuase modules use the outdated
+# boto libraries
+- block:
+    - name: Capture private DNS records
+      route53_info:
+        query: record_sets
+        hosted_zone_id: "{{ route53_private_hosted_zone_id }}"
+        max_items: "99999"
+      register: r_capture_private_dns_records
+
+    - name: Destroy private DNS entries
+      command: >-
+        aws route53 change-resource-record-sets
+        --hosted-zone-id {{ route53_private_hosted_zone_id }}
+        --change-batch '{
+          "Changes": [
+            {
+              "Action": "DELETE",
+              "ResourceRecordSet": {
+                "Name": {{ item.Name | to_json }},
+                "Type": {{ item.Type | to_json }},
+                "TTL": {{ item.TTL }},
+                "ResourceRecords": {{ item.ResourceRecords | to_json }}
+              }
+            }
+          ]
+        }'
+      loop: "{{ r_capture_private_dns_records.ResourceRecordSets }}"
+      register: r_destroy_private_dns_entries
+      changed_when: >-
+        'A HostedZone must contain exactly one SOA record' not in r_destroy_private_dns_entries.stderr
+        and 'A HostedZone must contain at least one NS record for the zone itself' not in r_destroy_private_dns_entries.stderr
+      failed_when: >-
+        'A HostedZone must contain exactly one SOA record' not in r_destroy_private_dns_entries.stderr
+        and 'A HostedZone must contain at least one NS record for the zone itself' not in r_destroy_private_dns_entries.stderr
+  when: route53_private_hosted_zone_id != ''
 
 - name: Destroy private DNS zone
   route53_zone:
@@ -208,21 +224,25 @@
         state: absent
       loop: "{{ r_capture_subnets.subnets }}"
 
+    # Ansible STILL doesn't support AWS GovCloud becuase modules use the
+    # outdated boto libraries
     - name: Capture route tables
-      ec2_vpc_route_table_info:
-        filters:
-          vpc-id: "{{ vpc_id }}"
-          tag:OpenShiftCluster: "{{ cluster_domain }}"
-          tag:OpenShiftClusterId: "{{ cluster_id }}"
+      command: >-
+        aws ec2 describe-route-tables
+        --filters
+        'Name=vpc-id,Values={{ vpc_id }}'
+        'Name=tag:OpenShiftCluster,Values={{ cluster_domain }}'
+        'Name=tag:OpenShiftClusterId,Values={{ cluster_id }}'
+        --output json
       register: r_capture_route_tables
 
     - name: Destroy route tables
       ec2_vpc_route_table:
-        route_table_id: "{{ item.id }}"
+        route_table_id: "{{ item }}"
         vpc_id: "{{ vpc_id }}"
         lookup: id
         state: absent
-      loop: "{{ r_capture_route_tables.route_tables }}"
+      loop: "{{ (r_capture_route_tables.stdout | from_json).RouteTables | map(attribute='RouteTableId') | list }}"
 
     - name: Destroy Internet gateway
       ec2_vpc_igw:

@@ -18,12 +18,4 @@
         name: infrastructure
         tasks_from: aws_destroy
       tags: [infrastructure]
-      when: cloud == 'aws'
-
-- hosts: localhost
-  tasks:
-    - import_role:
-        name: infrastructure
-        tasks_from: aws_govcloud_destroy
-      tags: [infrastructure]
-      when: cloud == 'aws_govcloud'
+      when: cloud in ['aws', 'aws_govcloud']

@@ -8,21 +8,35 @@
   set_fact:
     availability_zone_names: "{{ r_az_info.availability_zones | map(attribute='zone_name') | list }}"
 
-- name: Create DHCP Option Set
-  ec2_vpc_dhcp_option:
-    dns_servers:
-      - AmazonProvidedDNS
-    tags:
-      Name: "{{ cluster_id }}"
-      OpenShiftCluster: "{{ cluster_domain }}"
-      OpenShiftClusterId: "{{ cluster_id }}"
-  register: r_create_dhcp_option_set
+- name: Capture DHCP option sets
+  ec2_vpc_dhcp_option_info:
+    filters:
+      tag:Name: "{{ cluster_id }}"
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+  register: r_capture_dhcp_option_sets
+
+# Ansible STILL doesn't support AWS GovCloud becuase modules use the outdated
+# boto libraries
+- block:
+    - name: Create DHCP option set
+      command: >-
+        aws ec2 create-dhcp-options
+        --dhcp-configurations Key=domain-name-servers,Values=AmazonProvidedDNS
+        --tag-specifications ResourceType=dhcp-options,Tags="[{Key=Name,Value={{ cluster_id }}},{Key=OpenShiftCluster,Value={{ cluster_domain }}},{Key=OpenShiftClusterId,Value={{ cluster_id }}}]"
+        --output json
+      register: r_create_dhcp_option_set
+
+    - name: Set DHCP option set ID
+      set_fact:
+        dhcp_option_set_id: "{{ (r_create_dhcp_option_set.stdout | from_json).DhcpOptions.DhcpOptionsId }}"
+  when: (r_capture_dhcp_option_sets.dhcp_options | length) == 0
 
 - name: Create VPC
   ec2_vpc_net:
     name: "{{ cluster_id }}"
     cidr_block: "{{ vpc_cidr }}"
-    dhcp_opts_id: "{{ r_create_dhcp_option_set.dhcp_options_id }}"
+    dhcp_opts_id: "{{ dhcp_option_set_id | default(r_capture_dhcp_option_sets.dhcp_options.0.dhcp_options_id) }}"
     dns_support: yes
     dns_hostnames: yes
     tenancy: default
