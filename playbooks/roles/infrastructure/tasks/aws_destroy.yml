@@ -84,6 +84,7 @@
     - record: _etcd-server-ssl._tcp
       type: SRV
   register: r_capture_private_dns_records
+  ignore_errors: yes
 
 - name: Destroy private DNS entries
   route53:
