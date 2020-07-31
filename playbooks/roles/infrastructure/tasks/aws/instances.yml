@@ -67,7 +67,7 @@
       instance-state-name: ["pending", "running", "shutting-down", "stopping", "stopped"]
     user_data: "{{ ec2_user_data_bootstrap | to_json }}"
     state: running
-    wait: yes
+    wait: no
   register: r_create_bootstrap
 
 - name: Create controller instances
@@ -97,7 +97,7 @@
       instance-state-name: ["pending", "running", "shutting-down", "stopping", "stopped"]
     user_data: "{{ ec2_user_data_controller | to_json }}"
     state: running
-    wait: yes
+    wait: no
   loop: "{{ range(0, instance_count_controller) | list }}"
   register: r_create_controllers
 
@@ -128,9 +128,20 @@
       instance-state-name: ["pending", "running", "shutting-down", "stopping", "stopped"]
     user_data: "{{ ec2_user_data_worker | to_json }}"
     state: running
-    wait: yes
+    wait: no
   loop: "{{ range(0, instance_count_worker) | list }}"
   register: r_create_workers
+
+- name: Wait up to 5 minutes for all of the instances to be running
+  ec2_instance_info:
+    filters:
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+      instance-state-name: ["running"]
+  register: r_running_instances
+  until: (r_running_instances.instances | length) == 2 + instance_count_controller + instance_count_worker
+  retries: 10
+  delay: 30
 
 - import_tasks: instances_info.yml
 
@@ -139,7 +150,6 @@
 - name: Add Kubernetes cluster tag to instances
   ec2_tag:
     resource: "{{ hostvars[item].instance_id }}"
-    # "{{ r_create_bastion.instances.0.instance_id }}"
     tags: "{
       'kubernetes.io/cluster/{{ cluster_id }}': 'shared'
     }"
