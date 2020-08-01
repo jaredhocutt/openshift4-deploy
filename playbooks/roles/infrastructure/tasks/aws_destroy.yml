@@ -24,7 +24,7 @@
   when: vpc_id is undefined
 
 - block:
-    - name: Capture hosted zone details
+    - name: Capture public hosted zone details
       route53_info:
         hosted_zone_id: "{{ route53_hosted_zone_id }}"
         hosted_zone_method: details
@@ -103,6 +103,7 @@
     zone: "{{ cluster_domain }}"
     vpc_id: "{{ vpc_id }}"
     vpc_region: "{{ r_az_info.availability_zones.0.region_name }}"
+    state: absent
 
 - name: Destroy load balancers
   elb_network_lb:
