@@ -73,7 +73,7 @@
   when: cloud in ['aws', 'aws_govcloud']
 
 - name: Approve CSR requests from worker nodes (5 minute timeout)
-  script: "{{ role_path }}/files/csr_approve.sh {{ instance_count_worker | default(3) }}"
+  script: "{{ role_path }}/files/csr_approve.sh {{ instance_count_worker }}"
   environment:
     KUBECONFIG: "{{ openshift_install_dir }}/auth/kubeconfig"
 
