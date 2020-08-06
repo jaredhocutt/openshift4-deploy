@@ -19,7 +19,7 @@ instance_count_worker: 3
 ec2_instance_type_bastion: t3.medium
 ec2_instance_type_bootstrap: i3.large
 ec2_instance_type_controller: m5.xlarge
-ec2_instance_type_worker: m5.xlarge
+ec2_instance_type_worker: m5.large
 
 root_volume_size_bastion: 100  # +80GB to mirror the OLM images
 root_volume_size_controller: 120
