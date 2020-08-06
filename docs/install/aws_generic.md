@@ -80,21 +80,34 @@ permissions to `0600` as you would for any SSH key.
 There are several variables that you will need to define before running the
 deployment that are specific to your environment.
 
-| Variable            | Required           | Default | Description                                                                                                                                                                                                                                                                                                                                              |
-| ------------------- | ------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `base_domain`       | :heavy_check_mark: |         | The base domain of the cluster.<br><br>All DNS will be sub-domains of this `base_domain` and include the `cluster_name`.                                                                                                                                                                                                                                 |
-| `cloud`             | :heavy_check_mark: |         | The cloud provider to deploy to.<br><br>You should set this to `aws`.                                                                                                                                                                                                                                                                                    |
-| `cluster_name`      | :heavy_check_mark: |         | The cluster name.<br><br>This value will be in your DNS entries and should conform to valid DNS characters.                                                                                                                                                                                                                                              |
-| `keypair_name`      | :heavy_check_mark: |         | The name of the AWS key pair to use for the bastion host.                                                                                                                                                                                                                                                                                                |
-| `keypair_path`      | :heavy_check_mark: |         | The path to the private key for your AWS key pair.<br><br>Note: The private key's integrity will be maintained. It is only used by Ansible to connect to the bastion host.                                                                                                                                                                               |
-| `openshift_version` | :heavy_check_mark: |         | The OpenShift version to install.<br><br>The version must include the z-stream (e.g. 4.5.2).<br><br>The list of versions can be found [here][openshift_versions].                                                                                                                                                                                        |
-| `pull_secret`       | :heavy_check_mark: |         | The content of your pull secret, which can be found [here][pull_secret]. Be sure to wrap its value in single quotes.                                                                                                                                                                                                                                     |
-| `fips_mode`         |                    | `false` | Set to `true` to install a cluster that has FIPS-validation enabled.                                                                                                                                                                                                                                                                                     |
-| `rhcos_ami`         | :heavy_check_mark: |         | The AMI ID for RHCOS.<br><br>The AMI ID can be found [here][rhcos_ami_ids]. Be sure the documentation you are looking at matches the version of OpenShift you are deploying to get the correct AMI ID.<br><br>The intention is to add support to have this variable default to a sensible value, but at the moment you will need to provide the AMI ID. |
+| Variable                       | Required           | Default                                                    | Description                                                                                                                                                                                                                |
+| ------------------------------ | ------------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cloud`                        | :heavy_check_mark: |                                                            | The cloud provider to deploy to.<br><br>You should set this to `aws`.                                                                                                                                                      |
+| `openshift_version`            | :heavy_check_mark: |                                                            | The OpenShift version to install.<br><br>The version must include the z-stream (e.g. 4.5.2).<br><br>The list of versions can be found [here][openshift_versions].                                                          |
+| `cluster_name`                 | :heavy_check_mark: |                                                            | The cluster name.<br><br>This value will be in your DNS entries and should conform to valid DNS characters.                                                                                                                |
+| `base_domain`                  | :heavy_check_mark: |                                                            | The base domain of the cluster.<br><br>All DNS will be sub-domains of this `base_domain` and include the `cluster_name`.                                                                                                   |
+| `pull_secret`                  | :heavy_check_mark: |                                                            | The content of your pull secret, which can be found [here][pull_secret]. Be sure to wrap its value in single quotes.                                                                                                       |
+| `route53_hosted_zone_id`       |                    |                                                            | The Route53 hosted zone ID to use for public DNS entries.<br><br>By default, it will be assumed that a public zone named `{{ cluster_name }}.{{ cluster_domain }}` exists. Define this variable to override this behavior. |
+| `keypair_name`                 |                    | `{{ cluster_name }}-{{ base_domain | replace('.', '-') }}` | The name of the AWS key pair to use for the bastion host.<br><br>An AWS key pair will be generated for you by default.                                                                                                     |
+| `keypair_path`                 |                    | `~/.ssh/{{ keypair_name }}.pem`                            | The path to the private key for your AWS key pair.<br><br>Note: The private key's integrity will be maintained. It is only used by Ansible to connect to the bastion host.                                                 |
+| `fips_mode`                    |                    | `false`                                                    | Set to `true` to install a cluster that has FIPS-validation enabled.                                                                                                                                                       |
+| `rhcos_ami`                    |                    |                                                            | The AMI ID for RHCOS.<br><br>The AMI ID will be discovered for you by default, but if you'd like to use a specific AMI, it can be overriden using this variable.                                                           |
+| `rhel_ami`                     |                    |                                                            | The AMI ID for RHEL to use for the bastion.<br><br>The AMI ID will be discovered for you by default, but if you'd like to use a specific AMI, it can be overriden using this variable.                                     |
+| `vpc_cidr`                     |                    | `172.31.0.0/16`                                            | The CIDR to use when creating the VPC.                                                                                                                                                                                     |
+| `vpc_subnet_bits`              |                    | `24`                                                       | The number of bits to use when dividing VPC CIDR into subnets.                                                                                                                                                             |
+| `instance_count_worker`        |                    | `3`                                                        | The number of worker nodes to create initially.                                                                                                                                                                            |
+| `ec2_instance_type_bastion`    |                    | `t3.medium`                                                | The EC2 instance type for the bastion.                                                                                                                                                                                     |
+| `ec2_instance_type_bootstrap`  |                    | `i3.large`                                                 | The EC2 instance type for the bootstrap node.                                                                                                                                                                              |
+| `ec2_instance_type_controller` |                    | `m5.xlarge`                                                | The EC2 instance type for the controller nodes.                                                                                                                                                                            |
+| `ec2_instance_type_worker`     |                    | `m5.large`                                                 | The EC2 instance type for the worker nodes.                                                                                                                                                                                |
+| `root_volume_size_bastion`     |                    | `100`                                                      | The size of the root disk on the bastion.                                                                                                                                                                                  |
+| `root_volume_size_bootstrap`   |                    | `120`                                                      | The size of the root disk on the bootstrap node.                                                                                                                                                                           |
+| `root_volume_size_controller`  |                    | `120`                                                      | The size of the root disk on the controller nodes.                                                                                                                                                                         |
+| `root_volume_size_worker`      |                    | `120`                                                      | The size of the root disk on the worker nodes.                                                                                                                                                                             |
+| `additional_authorized_keys`   |                    | `[]`                                                       | A list of additional SSH public keys to add to the `~/.ssh/authorized_keys` on the bastion.                                                                                                                                |
 
 [pull_secret]: https://cloud.redhat.com/openshift/install/pull-secret
 [openshift_versions]: http://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/
-[rhcos_ami_ids]: https://docs.openshift.com/container-platform/latest/installing/installing_aws/installing-aws-user-infra.html#installation-aws-user-infra-rhcos-ami_installing-aws-user-infra
 
 Create a variable file at `vars/ocp4.yml`. An example file matching the content
 below can be found at `vars/example.aws.yml`.
@@ -123,22 +136,6 @@ cluster_name: ocp4
 # All DNS will be sub-domains of this base_domain and include the cluster_name.
 base_domain: example.com
 
-# The AMI ID for RHCOS.
-#
-# The AMI ID can be found here. Be sure the documentation you are looking at
-# matches the version of OpenShift you are deploying to get the correct AMI ID.
-#
-# The intention is to add support to have this variable default to a sensible
-# value, but at the moment you will need to provide the AMI ID.
-rhcos_ami: ami-123456789
-# The name of the AWS key pair to use for the bastion host.
-keypair_name: mykeypair
-# The path to the private key for your AWS key pair.
-#
-# The private key's integrity will be maintained. It is only used by Ansible to
-# connect to the bastion host.
-keypair_path: ~/.ssh/mykeypair.pem
-
 # The content of your pull secret, which can be found at
 # https://cloud.redhat.com/openshift/install/pull-secret.
 #
@@ -147,6 +144,9 @@ pull_secret: ''
 ```
 
 **Step 3: Create your DNS records (Public Zone and NS record)**
+
+> **NOTE:** If you have defined `route53_hosted_zone_id` in your variable file,
+> you can skip this step.
 
 Log into the AWS console and create a public Route53 Hosted Zone for your
 cluster.

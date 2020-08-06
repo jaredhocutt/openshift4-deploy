@@ -21,22 +21,6 @@ cluster_name: ocp4
 # All DNS will be sub-domains of this base_domain and include the cluster_name.
 base_domain: example.com
 
-# The AMI ID for RHCOS.
-#
-# The AMI ID can be found here. Be sure the documentation you are looking at
-# matches the version of OpenShift you are deploying to get the correct AMI ID.
-#
-# The intention is to add support to have this variable default to a sensible
-# value, but at the moment you will need to provide the AMI ID.
-rhcos_ami: ami-123456789
-# The name of the AWS key pair to use for the bastion host.
-keypair_name: mykeypair
-# The path to the private key for your AWS key pair.
-#
-# The private key's integrity will be maintained. It is only used by Ansible to
-# connect to the bastion host.
-keypair_path: ~/.ssh/mykeypair.pem
-
 # The content of your pull secret, which can be found at
 # https://cloud.redhat.com/openshift/install/pull-secret.
 #

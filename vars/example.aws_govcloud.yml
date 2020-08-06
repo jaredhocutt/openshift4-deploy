@@ -27,15 +27,8 @@ base_domain: example.com
 # AMI. After doing so, you can use that AMI ID for this variable.
 #
 # You can find details for creating a RHCOS AMI at
-# https://github.com/jaredhocutt/openshift4-deploy/blob/dev-air-gapped/docs/rhcos.md
+# https://github.com/jaredhocutt/openshift4-guides/blob/master/docs/rhcos_ami_upload.md
 rhcos_ami: ami-123456789
-# The name of the AWS key pair to use for the bastion host.
-keypair_name: mykeypair
-# The path to the private key for your AWS key pair.
-#
-# The private key's integrity will be maintained. It is only used by Ansible to
-# connect to the bastion host.
-keypair_path: ~/.ssh/mykeypair.pem
 
 # The content of your pull secret, which can be found at
 # https://cloud.redhat.com/openshift/install/pull-secret.
