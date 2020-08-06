@@ -123,7 +123,7 @@
 
 - name: Create external API load balancer
   elb_network_lb:
-    name: "{{ cluster_id }}-ext"
+    name: "{{ elb_name_api_ext }}"
     scheme: internet-facing
     subnets: "{{ public_subnet_ids }}"
     listeners:
@@ -133,7 +133,7 @@
           - Type: forward
             TargetGroupArn: "{{ r_create_external_api_target_group.target_group_arn }}"
     tags:
-      Name: "{{ cluster_id }}-ext"
+      Name: "{{ elb_name_api_ext }}"
       OpenShiftCluster: "{{ cluster_domain }}"
       OpenShiftClusterId: "{{ cluster_id }}"
     wait: yes
@@ -142,7 +142,7 @@
 
 - name: Create internal API load balancer
   elb_network_lb:
-    name: "{{ cluster_id }}-int"
+    name: "{{ elb_name_api_int }}"
     scheme: internal
     subnets: "{{ private_subnet_ids }}"
     listeners:
@@ -157,7 +157,7 @@
           - Type: forward
             TargetGroupArn: "{{ r_create_machine_config_target_group.target_group_arn }}"
     tags:
-      Name: "{{ cluster_id }}-int"
+      Name: "{{ elb_name_api_int }}"
       OpenShiftCluster: "{{ cluster_domain }}"
       OpenShiftClusterId: "{{ cluster_id }}"
     wait: yes
@@ -166,7 +166,7 @@
 
 - name: Create ingress load balancer
   elb_network_lb:
-    name: "{{ cluster_id }}-ingress"
+    name: "{{ elb_name_ingress }}"
     scheme: internet-facing
     subnets: "{{ public_subnet_ids }}"
     listeners:
@@ -181,7 +181,7 @@
           - Type: forward
             TargetGroupArn: "{{ r_create_https_target_group.target_group_arn }}"
     tags:
-      Name: "{{ cluster_id }}-ingress"
+      Name: "{{ elb_name_ingress }}"
       OpenShiftCluster: "{{ cluster_domain }}"
       OpenShiftClusterId: "{{ cluster_id }}"
     wait: yes

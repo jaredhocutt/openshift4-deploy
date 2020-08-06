@@ -29,7 +29,10 @@ root_volume_size_bootstrap: "{{ root_volume_size_controller }}"
 aws_commercial_rhel_ami_owner: 309956199498
 aws_govcloud_rhel_ami_owner: 219670896067
 
-# Limit target group names to 32 characters
+# Limit target group and load balancer names to 32 characters
+elb_name_api_ext: "{{ cluster_id[:28] }}-ext"
+elb_name_api_int: "{{ cluster_id[:28] }}-int"
+elb_name_ingress: "{{ cluster_id[:24] }}-ingress"
 elb_target_group_name_api: "{{ cluster_id[:28] }}-api"
 elb_target_group_name_api_int: "{{ cluster_id[:24] }}-api-int"
 elb_target_group_name_machine_config: "{{ cluster_id[:17] }}-machine-config"
