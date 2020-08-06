@@ -34,12 +34,13 @@
       !!!                           Action Items                            !!!
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      - You are deploying to AWS GovCloud, Route53 does not provide public
+      - You are deploying to AWS GovCloud where Route53 does not provide public
         zones, which means that all of your DNS entries are in a private zone.
+
         To access your cluster, you will need to create a VPN/tunnel connection
         to your bastion host.
 
-        In a demo environment, an easy way to do this is by using sshuttle.
+        In a dev environment, an easy way to do this is by using sshuttle.
 
         https://github.com/sshuttle/sshuttle
 
