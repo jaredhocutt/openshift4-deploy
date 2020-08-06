@@ -110,7 +110,8 @@
         'A HostedZone must contain exactly one SOA record' not in r_destroy_private_dns_entries.stderr
         and 'A HostedZone must contain at least one NS record for the zone itself' not in r_destroy_private_dns_entries.stderr
       failed_when: >-
-        'A HostedZone must contain exactly one SOA record' not in r_destroy_private_dns_entries.stderr
+        r_destroy_private_dns_entries.rc != 0
+        and 'A HostedZone must contain exactly one SOA record' not in r_destroy_private_dns_entries.stderr
         and 'A HostedZone must contain at least one NS record for the zone itself' not in r_destroy_private_dns_entries.stderr
   when: route53_private_hosted_zone_id != ''
 
