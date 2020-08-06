@@ -48,6 +48,7 @@
       - bind-utils
       - git
       - httpd
+      - "{{ 'jq' if ansible_distribution_major_version == '8' else omit }}"
       - python3
       - python3-pip
       - "{{ (ansible_distribution_major_version == '8') | ternary('tmux', 'screen') }}"
