@@ -128,9 +128,9 @@
     wait: yes
     state: absent
   loop:
-    - "{{ cluster_id }}-int"
-    - "{{ cluster_id }}-ext"
-    - "{{ cluster_id }}-ingress"
+    - "{{ elb_name_api_int }}"
+    - "{{ elb_name_api_ext }}"
+    - "{{ elb_name_ingress }}"
 
 - name: Capture target groups
   elb_target_group_info:
