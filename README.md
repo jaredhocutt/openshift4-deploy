@@ -20,14 +20,22 @@ have OpenShift 4 integreate with the cloud provider APIs, etc.
 
 Deploy OpenShift 4 on the following platforms:
 
+> **NOTE:** The options listed below that indicate a **Generic Installation**
+> will deploy a cluster that does not have cloud provider integration. The
+> underlying cloud platform will be treated as generic compute from the
+> viewpoint of the OpenShift cluster. More specifically, the "bare metal"
+> method of installation is used for these options.
+
 - **Amazon Web Services (AWS)**
-  - [Generic Installation (no cloud provider integration)][1]
+  - [Generic Installation][aws_generic]
 - **Amazon Web Services GovCloud (AWS GovCloud)**
-  - [Generic Installation (no cloud provider integration)][2]
+  - [Generic Installation][aws_govcloud_generic]
+  - [Generic Installation - Air-gapped][aws_govcloud_generic_airgapped]
 
 For documentation on how to use this repository for a given platform, click the
 links for the platform you want to use above.
 
 
-[1]: docs/install/aws_generic.md
-[2]: docs/install/aws_govcloud_generic.md
+[aws_generic]: docs/install/aws_generic.md
+[aws_govcloud_generic]: docs/install/aws_govcloud_generic.md
+[aws_govcloud_generic_airgapped]: docs/install/aws_govcloud_generic_airgapped.md

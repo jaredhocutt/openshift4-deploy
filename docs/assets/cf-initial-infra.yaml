@@ -1,0 +1,345 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template for initial infrastructure in air-gapped environment
+
+Parameters:
+  ClusterName:
+    Description: A short, representative cluster name to use for host names and other identifying names.
+    Type: String
+  BaseDomain:
+    Description: The base domain of the cluster. All DNS records must be sub-domains of this base and include the cluster name.
+    Type: String
+  Rhel8Ami:
+    Description: Red Hat Enterprise Linux 8 AMI to use for bastion.
+    Type: AWS::EC2::Image::Id
+  KeyPairName:
+    Description: Name of keypair to use for instances
+    Type: AWS::EC2::KeyPair::KeyName
+  VpcCidr:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-4]))
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-24.
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC.
+    Type: String
+  SubnetBits:
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/19-27.
+    MinValue: 5
+    MaxValue: 13
+    Default: 12
+    Description: "Size of each subnet to create within the availability zones. (Min: 5 = /27, Max: 13 = /19)"
+    Type: Number
+
+Resources:
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      CidrBlock: !Ref VpcCidr
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClusterName
+              - !Join ["-", !Split [".", !Ref BaseDomain]]
+
+  PublicSubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 6, !Ref SubnetBits]]
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref "AWS::Region"
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClusterName
+              - !Join ["-", !Split [".", !Ref BaseDomain]]
+              - !Select
+                - 0
+                - Fn::GetAZs: !Ref "AWS::Region"
+              - "public"
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+  InternetGatewayAttachement:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+  PublicRoute:
+    Type: "AWS::EC2::Route"
+    DependsOn: InternetGatewayAttachement
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Select [3, !Cidr [!Ref VpcCidr, 6, !Ref SubnetBits]]
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref "AWS::Region"
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClusterName
+              - !Join ["-", !Split [".", !Ref BaseDomain]]
+              - !Select
+                - 0
+                - Fn::GetAZs: !Ref "AWS::Region"
+              - "private"
+  PrivateRouteTable1:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+  PrivateSubnetRouteTableAssociation1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateSubnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Select [4, !Cidr [!Ref VpcCidr, 6, !Ref SubnetBits]]
+      AvailabilityZone: !Select
+        - 1
+        - Fn::GetAZs: !Ref "AWS::Region"
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClusterName
+              - !Join ["-", !Split [".", !Ref BaseDomain]]
+              - !Select
+                - 1
+                - Fn::GetAZs: !Ref "AWS::Region"
+              - "private"
+  PrivateRouteTable2:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+  PrivateSubnetRouteTableAssociation2:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  PrivateSubnet3:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Select [5, !Cidr [!Ref VpcCidr, 6, !Ref SubnetBits]]
+      AvailabilityZone: !Select
+        - 2
+        - Fn::GetAZs: !Ref "AWS::Region"
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClusterName
+              - !Join ["-", !Split [".", !Ref BaseDomain]]
+              - !Select
+                - 2
+                - Fn::GetAZs: !Ref "AWS::Region"
+              - "private"
+  PrivateRouteTable3:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC
+  PrivateSubnetRouteTableAssociation3:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref PrivateRouteTable3
+
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Join
+        - "-"
+        - - !Ref ClusterName
+          - !Join ["-", !Split [".", !Ref BaseDomain]]
+          - "bastion"
+      GroupDescription: Bastion security group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref VpcCidr
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: !Ref VpcCidr
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 52.200.186.197/32
+          Description: RHUI for us-east-1
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 18.191.70.242/32
+          Description: RHUI for us-east-2
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 13.56.49.95/32
+          Description: RHUI for us-west-1
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 54.200.7.178/32
+          Description: RHUI for us-west-2
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClusterName
+              - !Join ["-", !Split [".", !Ref BaseDomain]]
+              - "bastion"
+
+  BastionSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref BastionSecurityGroup
+      IpProtocol: -1
+      FromPort: -1
+      ToPort: -1
+      SourceSecurityGroupId: !GetAtt BastionSecurityGroup.GroupId
+
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref Rhel8Ami
+      InstanceType: "t3.medium"
+      KeyName: !Ref KeyPairName
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: "120"
+            VolumeType: "gp2"
+      NetworkInterfaces:
+      - DeviceIndex: "0"
+        AssociatePublicIpAddress: true
+        GroupSet:
+        - !Ref "BastionSecurityGroup"
+        SubnetId: !Ref "PublicSubnet"
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClusterName
+              - !Join ["-", !Split [".", !Ref BaseDomain]]
+              - "bastion"
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+
+            yum-config-manager --enable rhel-8-baseos-rhui-rpms --enable rhel-8-appstream-rhui-rpms
+            yum install -y python3 podman skopeo git tar
+            yum install -y httpd yum-utils
+
+            mkdir -p /var/www/html/repos
+            reposync --download-path /var/www/html/repos --download-metadata --repo rhui-rhel-8-baseos-rhui-rpms --repo rhui-rhel-8-appstream-rhui-rpms
+            systemctl enable --now httpd
+
+            touch /INIT_SETUP_COMPLETE
+
+  EC2Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - '*'
+            Resource:
+              - '*'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      SecurityGroupIds:
+        - !GetAtt BastionSecurityGroup.GroupId
+      PrivateDnsEnabled: true
+      ServiceName: !Join
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .ec2
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+
+  STSEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - '*'
+            Resource:
+              - '*'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      SecurityGroupIds:
+        - !GetAtt BastionSecurityGroup.GroupId
+      PrivateDnsEnabled: true
+      ServiceName: !Join
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .sts
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+
+Outputs:
+  VpcId:
+    Description: ID of the VPC.
+    Value: !Ref VPC
+  PrivateSubnetIds:
+    Description: Subnet IDs of the private subnets.
+    Value:
+      !Join [
+        ",",
+        [
+          !Ref PrivateSubnet1,
+          !Ref PrivateSubnet2,
+          !Ref PrivateSubnet3
+        ]
+      ]
+  BastionSecurityGroupId:
+    Description: Bastion security group ID
+    Value: !GetAtt BastionSecurityGroup.GroupId
+  BastionPublicIp:
+    Description: The bastion public IP address.
+    Value: !GetAtt BastionInstance.PublicIp
