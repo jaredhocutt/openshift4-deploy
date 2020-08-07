@@ -1,16 +1,264 @@
 ---
 
-- name: Destroy infrastructure using Terraform
-  terraform:
-    project_path: "{{ role_path }}/terraform/aws"
+- name: Set boolean to destroy VPC
+  set_fact:
+    destroy_vpc: yes
+  when: vpc_id is undefined
+
+- name: Capture availability zone info
+  aws_az_info: {}
+  register: r_az_info
+
+- block:
+    - name: Capture VPC info
+      ec2_vpc_net_info:
+        filters:
+          tag:Name: "{{ cluster_id }}"
+          tag:OpenShiftCluster: "{{ cluster_domain }}"
+          tag:OpenShiftClusterId: "{{ cluster_id }}"
+      register: r_vpc_info
+
+    - name: Set VPC ID
+      set_fact:
+        vpc_id: "{{ r_vpc_info.vpcs.0.vpc_id }}"
+  when: vpc_id is undefined
+
+- block:
+    - name: Capture public hosted zone details
+      route53_info:
+        hosted_zone_id: "{{ route53_hosted_zone_id }}"
+        hosted_zone_method: details
+        query: hosted_zone
+      register: r_capture_public_hosted_zone
+
+    - name: Set hosted zone name
+      set_fact:
+        route53_hosted_zone_name: "{{ r_capture_public_hosted_zone.HostedZone.Name }}"
+  when:
+    - cloud == 'aws'
+    - route53_hosted_zone_id is defined
+
+- name: Capture public DNS entries
+  route53:
+    zone: "{{ route53_hosted_zone_name }}"
+    record: "{{ item.record }}.{{ cluster_domain }}"
+    type: "{{ item.type }}"
+    private_zone: no
+    state: get
+  loop:
+    - record: api
+      type: CNAME
+    - record: "*.apps"
+      type: CNAME
+  register: r_capture_public_dns_records
+  when: cloud == 'aws'
+
+- name: Destroy public DNS entries
+  route53:
+    zone: "{{ route53_hosted_zone_name }}"
+    record: "{{ item.set.record }}"
+    value: "{{ item.set.value }}"
+    type: "{{ item.set.type }}"
+    ttl: "{{ item.set.ttl }}"
     state: absent
-    variables:
-      cluster_name: "{{ cluster_name }}"
-      base_domain: "{{ base_domain }}"
-      cluster_domain: "{{ cluster_domain }}"
-      cluster_id: "{{ cluster_id }}"
-      vpc_cidr: "{{ vpc_cidr | default(omit) }}"
-      rhcos_ami: "{{ rhcos_ami }}"
-      keypair_name: "{{ keypair_name }}"
-    workspace: "{{ terraform_workspace }}"
-  register: r_terraform_apply
+  loop: "{{ r_capture_public_dns_records.results }}"
+  when:
+    - cloud == 'aws'
+    - item.set.value is defined
+
+- name: Capture hosted zones
+  route53_info:
+    query: hosted_zone
+    hosted_zone_method: list
+    max_items: "99999"
+  register: r_capture_hosted_zones
+
+- name: Set private hosted zone ID
+  set_fact:
+    route53_private_hosted_zone_id: "{{ r_capture_hosted_zones | json_query('HostedZones[?Config.PrivateZone==`true` && Name==`' + cluster_domain + '.`].Id | [0]') | default('', true) | replace('/hostedzone/', '') }}"
+
+# Ansible STILL doesn't support AWS GovCloud becuase modules use the outdated
+# boto libraries
+- block:
+    - name: Capture private DNS records
+      route53_info:
+        query: record_sets
+        hosted_zone_id: "{{ route53_private_hosted_zone_id }}"
+        max_items: "99999"
+      register: r_capture_private_dns_records
+
+    - name: Destroy private DNS entries
+      command: >-
+        aws route53 change-resource-record-sets
+        --hosted-zone-id {{ route53_private_hosted_zone_id }}
+        --change-batch '{
+          "Changes": [
+            {
+              "Action": "DELETE",
+              "ResourceRecordSet": {
+                "Name": {{ item.Name | to_json }},
+                "Type": {{ item.Type | to_json }},
+                "TTL": {{ item.TTL }},
+                "ResourceRecords": {{ item.ResourceRecords | to_json }}
+              }
+            }
+          ]
+        }'
+      loop: "{{ r_capture_private_dns_records.ResourceRecordSets }}"
+      register: r_destroy_private_dns_entries
+      changed_when: >-
+        'A HostedZone must contain exactly one SOA record' not in r_destroy_private_dns_entries.stderr
+        and 'A HostedZone must contain at least one NS record for the zone itself' not in r_destroy_private_dns_entries.stderr
+      failed_when: >-
+        r_destroy_private_dns_entries.rc != 0
+        and 'A HostedZone must contain exactly one SOA record' not in r_destroy_private_dns_entries.stderr
+        and 'A HostedZone must contain at least one NS record for the zone itself' not in r_destroy_private_dns_entries.stderr
+  when: route53_private_hosted_zone_id != ''
+
+- name: Destroy private DNS zone
+  route53_zone:
+    zone: "{{ cluster_domain }}"
+    vpc_id: "{{ vpc_id }}"
+    vpc_region: "{{ r_az_info.availability_zones.0.region_name }}"
+    state: absent
+
+- name: Destroy load balancers
+  elb_network_lb:
+    name: "{{ item }}"
+    wait: yes
+    state: absent
+  loop:
+    - "{{ elb_name_api_int }}"
+    - "{{ elb_name_api_ext }}"
+    - "{{ elb_name_ingress }}"
+
+- name: Capture target groups
+  elb_target_group_info:
+    names:
+      - "{{ elb_target_group_name_api }}"
+      - "{{ elb_target_group_name_api_int }}"
+      - "{{ elb_target_group_name_machine_config }}"
+      - "{{ elb_target_group_name_http }}"
+      - "{{ elb_target_group_name_https }}"
+  register: r_capture_target_groups
+
+- name: Destroy target groups
+  elb_target_group:
+    name: "{{ item.target_group_name }}"
+    vpc_id: "{{ item.vpc_id }}"
+    protocol: "{{ item.protocol }}"
+    port: "{{ item.port }}"
+    wait: yes
+    state: absent
+  loop: "{{ r_capture_target_groups.target_groups }}"
+
+- name: Destroy EC2 instances
+  ec2_instance:
+    filters:
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+      instance-state-name: ["pending", "running", "shutting-down", "stopping", "stopped"]
+    wait: yes
+    state: absent
+
+- name: Capture security groups
+  ec2_group_info:
+    filters:
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+  register: r_catpure_security_groups
+
+- name: Purge all security group rules
+  ec2_group:
+    group_id: "{{ item.group_id }}"
+    name: "{{ item.group_name }}"
+    description: "{{ item.description }}"
+    vpc_id: "{{ vpc_id }}"
+    purge_rules: yes
+    purge_rules_egress: yes
+    rules:
+      - rule_desc: Dummy rule to replace all other rules
+        proto: icmp
+        ports: 0
+        cidr_ip: 169.254.0.0/16
+  loop: "{{ r_catpure_security_groups.security_groups }}"
+
+- name: Destroy security groups
+  ec2_group:
+    group_id: "{{ item.group_id }}"
+    vpc_id: "{{ vpc_id }}"
+    state: absent
+  loop: "{{ r_catpure_security_groups.security_groups }}"
+
+- block:
+    - name: Capture NAT gateways
+      ec2_vpc_nat_gateway_info:
+        filters:
+          tag:OpenShiftCluster: "{{ cluster_domain }}"
+          tag:OpenShiftClusterId: "{{ cluster_id }}"
+      register: r_capture_nat_gateways
+
+    - name: Destroy NAT gateways
+      ec2_vpc_nat_gateway:
+        nat_gateway_id: "{{ item.nat_gateway_id }}"
+        release_eip: yes
+        wait: yes
+        state: absent
+      loop: "{{ r_capture_nat_gateways.result }}"
+
+    - name: Capture subnets
+      ec2_vpc_subnet_info:
+        filters:
+          vpc-id: "{{ vpc_id }}"
+          tag:OpenShiftCluster: "{{ cluster_domain }}"
+          tag:OpenShiftClusterId: "{{ cluster_id }}"
+      register: r_capture_subnets
+
+    - name: Destroy subnets
+      ec2_vpc_subnet:
+        vpc_id: "{{ vpc_id }}"
+        az: "{{ item.availability_zone }}"
+        cidr: "{{ item.cidr_block }}"
+        tags:
+          OpenShiftCluster: "{{ cluster_domain }}"
+          OpenShiftClusterId: "{{ cluster_id }}"
+        state: absent
+      loop: "{{ r_capture_subnets.subnets }}"
+
+    # Ansible STILL doesn't support AWS GovCloud becuase modules use the
+    # outdated boto libraries
+    - name: Capture route tables
+      command: >-
+        aws ec2 describe-route-tables
+        --filters
+        'Name=vpc-id,Values={{ vpc_id }}'
+        'Name=tag:OpenShiftCluster,Values={{ cluster_domain }}'
+        'Name=tag:OpenShiftClusterId,Values={{ cluster_id }}'
+        --output json
+      register: r_capture_route_tables
+
+    - name: Destroy route tables
+      ec2_vpc_route_table:
+        route_table_id: "{{ item }}"
+        vpc_id: "{{ vpc_id }}"
+        lookup: id
+        state: absent
+      loop: "{{ (r_capture_route_tables.stdout | from_json).RouteTables | map(attribute='RouteTableId') | list }}"
+
+    - name: Destroy Internet gateway
+      ec2_vpc_igw:
+        vpc_id: "{{ vpc_id }}"
+        tags:
+          OpenShiftCluster: "{{ cluster_domain }}"
+          OpenShiftClusterId: "{{ cluster_id }}"
+        state: absent
+
+    - name: Destroy VPC
+      ec2_vpc_net:
+        name: "{{ cluster_id }}"
+        cidr_block: "{{ vpc_cidr }}"
+        tags:
+          OpenShiftCluster: "{{ cluster_domain }}"
+          OpenShiftClusterId: "{{ cluster_id }}"
+        state: absent
+  when: destroy_vpc

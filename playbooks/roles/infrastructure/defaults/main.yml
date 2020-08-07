@@ -1,9 +1,40 @@
 ---
 # defaults file for infrastructure
 
-terraform_workspace: "openshift-deploy-{{ cluster_name }}-{{ base_domain | replace('.', '-') }}"
-
 cluster_id: "{{ cluster_name }}-{{ base_domain | replace('.', '-') }}"
 cluster_domain: "{{ cluster_name }}.{{ base_domain }}"
 
 vpc_cidr: 172.31.0.0/16
+vpc_subnet_bits: 24
+route53_hosted_zone_name: "{{ cluster_domain }}"
+destroy_vpc: no
+
+openshift_version_major: "{{ openshift_version.split('.')[0] }}"
+openshift_version_minor: "{{ openshift_version.split('.')[1] }}"
+openshift_version_zstream: "{{ openshift_version.split('.')[2] }}"
+
+instance_count_controller: 3
+instance_count_worker: 3
+
+ec2_instance_type_bastion: t3.medium
+ec2_instance_type_bootstrap: i3.large
+ec2_instance_type_controller: m5.xlarge
+ec2_instance_type_worker: m5.large
+
+root_volume_size_bastion: 100  # +80GB to mirror the OLM images
+root_volume_size_controller: 120
+root_volume_size_worker: "{{ root_volume_size_controller }}"
+root_volume_size_bootstrap: "{{ root_volume_size_controller }}"
+
+aws_commercial_rhel_ami_owner: 309956199498
+aws_govcloud_rhel_ami_owner: 219670896067
+
+# Limit target group and load balancer names to 32 characters
+elb_name_api_ext: "{{ cluster_id[:28] }}-ext"
+elb_name_api_int: "{{ cluster_id[:28] }}-int"
+elb_name_ingress: "{{ cluster_id[:24] }}-ingress"
+elb_target_group_name_api: "{{ cluster_id[:28] }}-api"
+elb_target_group_name_api_int: "{{ cluster_id[:24] }}-api-int"
+elb_target_group_name_machine_config: "{{ cluster_id[:17] }}-machine-config"
+elb_target_group_name_http: "{{ cluster_id[:27] }}-http"
+elb_target_group_name_https: "{{ cluster_id[:26] }}-https"

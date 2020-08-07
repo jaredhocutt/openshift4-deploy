@@ -1,0 +1,7 @@
+---
+
+- name: Set keypair facts
+  set_fact:
+    keypair_name: "{{ cluster_id }}"
+    keypair_path: ~/.ssh/{{ cluster_id }}.pem
+  when: keypair_name is undefined

@@ -18,13 +18,7 @@
         name: infrastructure
         tasks_from: aws_create
       tags: [infrastructure]
-      when: cloud == 'aws'
-
-    - include_role:
-        name: infrastructure
-        tasks_from: aws_govcloud_create
-      tags: [infrastructure]
-      when: cloud == 'aws_govcloud'
+      when: cloud in ['aws', 'aws_govcloud']
 
 - hosts: bastion
   tasks:

@@ -1,0 +1,157 @@
+---
+
+- name: Create user data structure for instances
+  set_fact:
+    ec2_user_data_bootstrap:
+      ignition:
+        config:
+          replace:
+            source: http://{{ hostvars.bastion.private_ip_address }}/bootstrap.ign
+            verification: {}
+        timeouts: {}
+        version: "2.1.0"
+      networkd: {}
+      passwd: {}
+      storage: {}
+      systemd: {}
+    ec2_user_data_controller:
+      ignition:
+        config:
+          replace:
+            source: http://{{ hostvars.bastion.private_ip_address }}/master.ign
+            verification: {}
+        timeouts: {}
+        version: "2.1.0"
+      networkd: {}
+      passwd: {}
+      storage: {}
+      systemd: {}
+    ec2_user_data_worker:
+      ignition:
+        config:
+          replace:
+            source: http://{{ hostvars.bastion.private_ip_address }}/worker.ign
+            verification: {}
+        timeouts: {}
+        version: "2.1.0"
+      networkd: {}
+      passwd: {}
+      storage: {}
+      systemd: {}
+
+- name: Create bootstrap instance
+  ec2_instance:
+    name: "{{ cluster_id }}-bootstrap"
+    image_id: "{{ rhcos_ami }}"
+    instance_type: "{{ ec2_instance_type_bootstrap }}"
+    vpc_subnet_id: "{{ private_subnet_ids.0 }}"
+    instance_role: "{{ ec2_instance_role_bootstrap | default(omit) }}"
+    security_groups:
+      - "{{ cluster_id }}-bootstrap"
+      - "{{ cluster_id }}-controller"
+    volumes:
+      - device_name: /dev/xvda
+        ebs:
+          volume_type: gp2
+          volume_size: "{{ root_volume_size_bootstrap }}"
+          delete_on_termination: yes
+    tags:
+      Name: "{{ cluster_id }}-bootstrap"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+      OpenShiftRole: bootstrap
+    filters:
+      tag:Name: "{{ cluster_id }}-bootstrap"
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+      instance-state-name: ["pending", "running", "shutting-down", "stopping", "stopped"]
+    user_data: "{{ ec2_user_data_bootstrap | to_json }}"
+    state: running
+    wait: no
+  register: r_create_bootstrap
+
+- name: Create controller instances
+  ec2_instance:
+    name: "{{ cluster_id }}-controller-{{ '%02d' | format(item) }}"
+    image_id: "{{ rhcos_ami }}"
+    instance_type: "{{ ec2_instance_type_controller }}"
+    vpc_subnet_id: "{{ private_subnet_ids[item % (availability_zone_names | length)] }}"
+    instance_role: "{{ ec2_instance_role_controller | default(omit) }}"
+    security_groups:
+      - "{{ cluster_id }}-controller"
+    volumes:
+      - device_name: /dev/xvda
+        ebs:
+          volume_type: gp2
+          volume_size: "{{ root_volume_size_controller }}"
+          delete_on_termination: yes
+    tags:
+      Name: "{{ cluster_id }}-controller-{{ '%02d' | format(item) }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+      OpenShiftRole: controller
+    filters:
+      tag:Name: "{{ cluster_id }}-controller-{{ '%02d' | format(item) }}"
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+      instance-state-name: ["pending", "running", "shutting-down", "stopping", "stopped"]
+    user_data: "{{ ec2_user_data_controller | to_json }}"
+    state: running
+    wait: no
+  loop: "{{ range(0, instance_count_controller) | list }}"
+  register: r_create_controllers
+
+- name: Create worker instances
+  ec2_instance:
+    name: "{{ cluster_id }}-worker-{{ '%02d' | format(item) }}"
+    image_id: "{{ rhcos_ami }}"
+    instance_type: "{{ ec2_instance_type_worker }}"
+    vpc_subnet_id: "{{ private_subnet_ids[item % (availability_zone_names | length)] }}"
+    instance_role: "{{ ec2_instance_role_worker | default(omit) }}"
+    security_groups:
+      - "{{ cluster_id }}-worker"
+    volumes:
+      - device_name: /dev/xvda
+        ebs:
+          volume_type: gp2
+          volume_size: "{{ root_volume_size_worker }}"
+          delete_on_termination: yes
+    tags:
+      Name: "{{ cluster_id }}-worker-{{ '%02d' | format(item) }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+      OpenShiftRole: worker
+    filters:
+      tag:Name: "{{ cluster_id }}-worker-{{ '%02d' | format(item) }}"
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+      instance-state-name: ["pending", "running", "shutting-down", "stopping", "stopped"]
+    user_data: "{{ ec2_user_data_worker | to_json }}"
+    state: running
+    wait: no
+  loop: "{{ range(0, instance_count_worker) | list }}"
+  register: r_create_workers
+
+- name: Wait up to 5 minutes for all of the instances to be running
+  ec2_instance_info:
+    filters:
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+      instance-state-name: ["running"]
+  register: r_running_instances
+  until: (r_running_instances.instances | length) == 2 + instance_count_controller + instance_count_worker
+  retries: 10
+  delay: 30
+
+- import_tasks: instances_info.yml
+
+# NOTE: The _odd_ syntax for the tags is due to needing to have
+# a variable name in the tag key.
+- name: Add Kubernetes cluster tag to instances
+  ec2_tag:
+    resource: "{{ hostvars[item].instance_id }}"
+    tags: "{
+      'kubernetes.io/cluster/{{ cluster_id }}': 'shared'
+    }"
+    state: present
+  loop: "{{ groups.openshift }}"

@@ -1,8 +1,43 @@
 #!/usr/bin/env python3
 
-from deploy.cli import OpenShiftDeployCLI
-from deploy.deploy import SUPPORTED_CONTAINER_RUNTIMES, OpenShiftDeploy
-from deploy.helper import BASE_DIR, ContainerRuntimeMissingError
+import logging
+import logging.config
+
+from app import BASE_DIR, SUPPORTED_CONTAINER_RUNTIMES
+from app import ContainerRuntimeMissingError
+from app.cli import OpenShiftDeployCLI
+from app.deploy import OpenShiftDeploy
+from app.bundle import OpenShiftBundle
+
+
+LOGGING_CONFIG = {
+    'version': 1,
+    'formatters': {
+        'simple': {
+            'format': '%(asctime)-8s | %(levelname)-8s | %(name)-10s | %(message)s',
+            'datefmt': '%H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'app': {
+            'level': 'DEBUG',
+            'handlers': [
+                'console',
+            ],
+            'propagate': 'no',
+        },
+    },
+}
+
+logging.config.dictConfig(LOGGING_CONFIG)
+logger = logging.getLogger('app')
 
 
 if __name__ == '__main__':
@@ -10,9 +45,15 @@ if __name__ == '__main__':
     known_args, extra_args = cli.parse_known_args()
 
     try:
-        od = OpenShiftDeploy(
-            skip_update=known_args.skip_update,
-        )
+        if known_args.action == 'bundle':
+            ob = OpenShiftBundle(
+                vars_file=known_args.vars_file,
+                bundle_dir=known_args.bundle_dir,
+            )
+        else:
+            od = OpenShiftDeploy(
+                vars_file=known_args.vars_file,
+            )
     except ContainerRuntimeMissingError:
         print('\n'.join([
             'You do not have a supported container runtime installed.',
@@ -23,17 +64,24 @@ if __name__ == '__main__':
             'Please install one of those options and try again.'
         ]))
 
-    if known_args.action == 'shell':
+    if known_args.action == 'build':
+        od.build()
+    elif known_args.action == 'shell':
         od.shell()
+    elif known_args.action == 'bundle':
+        if known_args.bundle_action == 'export':
+            ob.export_bundle(extra_args)
+        # elif known_args.bundle_action == 'import':
+        #     ob.import_bundle(extra_args)
     elif known_args.action == 'create':
-        od.create(known_args.vars_file, extra_args)
+        od.create(extra_args)
     elif known_args.action == 'destroy':
-        od.destroy(known_args.vars_file, extra_args)
+        od.destroy(extra_args)
     elif known_args.action == 'start':
-        od.start(known_args.vars_file, extra_args)
+        od.start(extra_args)
     elif known_args.action == 'stop':
-        od.stop(known_args.vars_file, extra_args)
+        od.stop(extra_args)
     elif known_args.action == 'info':
-        od.info(known_args.vars_file, extra_args)
+        od.info(extra_args)
     elif known_args.action == 'ssh':
-        od.ssh(known_args.vars_file)
+        od.ssh()

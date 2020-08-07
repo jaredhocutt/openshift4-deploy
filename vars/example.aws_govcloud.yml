@@ -1,0 +1,37 @@
+---
+
+# The cloud provider to deploy to.
+cloud: aws_govcloud
+
+# The OpenShift version to install.
+#
+# The version must include the z-stream (e.g.4.4.3)
+#
+# The list of versions can be found at
+# http://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/
+openshift_version: 4.5.2
+
+# The cluster name.
+#
+# This value will be in your DNS entries and should conform to valid DNS
+# characters.
+cluster_name: ocp4
+# The base domain of the cluster.
+#
+# All DNS will be sub-domains of this base_domain and include the cluster_name.
+base_domain: example.com
+
+# The AMI ID for RHCOS.
+#
+# In AWS GovCloud, you will need to upload the RHCOS image and create your own
+# AMI. After doing so, you can use that AMI ID for this variable.
+#
+# You can find details for creating a RHCOS AMI at
+# https://github.com/jaredhocutt/openshift4-guides/blob/master/docs/rhcos_ami_upload.md
+rhcos_ami: ami-123456789
+
+# The content of your pull secret, which can be found at
+# https://cloud.redhat.com/openshift/install/pull-secret.
+#
+# Be sure to wrap its value in single quotes.
+pull_secret: ''

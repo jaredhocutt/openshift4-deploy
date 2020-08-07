@@ -12,15 +12,15 @@
       Your OpenShift 4 cluster has finished deploying.
 
       The cluster consists of the following machines:
-        {% for master in groups.masters %}
-        master{{ loop.index0 }}    {{ hostvars[master].ip_address }}
+        {% for controller in groups.controllers %}
+        controller{{ loop.index0 }}    {{ hostvars[controller].private_ip_address }}
         {% endfor %}
         {%- for worker in groups.workers %}
-        worker{{ loop.index0 }}    {{ hostvars[worker].ip_address }}
+        worker{{ loop.index0 }}    {{ hostvars[worker].private_ip_address }}
         {% endfor %}
 
       If you need to SSH into any of the OpenShift nodes, you can do so from the bastion:
-        ssh -i {{ keypair_path }} {{ hostvars['bastion'].ansible_user }}@{{ hostvars['bastion'].ansible_host }}
+        ssh -i {{ hostvars.localhost.keypair_path }} {{ hostvars.bastion.ansible_user }}@{{ hostvars.bastion.ansible_host }}
 
       You can access the OpenShift web-console here:
         https://console-openshift-console.apps.{{ cluster_domain }}
@@ -34,14 +34,15 @@
       !!!                           Action Items                            !!!
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      - You are deploying to AWS GovCloud, Route53 does not provide public
+      - You are deploying to AWS GovCloud where Route53 does not provide public
         zones, which means that all of your DNS entries are in a private zone.
+
         To access your cluster, you will need to create a VPN/tunnel connection
         to your bastion host.
 
-        In a demo environment, an easy way to do this is by using sshuttle.
+        In a dev environment, an easy way to do this is by using sshuttle.
 
         https://github.com/sshuttle/sshuttle
 
-        sshuttle --ssh-cmd 'ssh -i {{ keypair_path }}' -r {{ hostvars['bastion'].ansible_user }}@{{ hostvars['bastion'].ansible_host }} {{ vpc_cidr | default('172.31.0.0/16') }} --dns
+        sshuttle --ssh-cmd 'ssh -i {{ hostvars.localhost.keypair_path }}' -r {{ hostvars.bastion.ansible_user }}@{{ hostvars.bastion.ansible_host }} {{ vpc_cidr | default('172.31.0.0/16') }} --dns
       {% endif %}

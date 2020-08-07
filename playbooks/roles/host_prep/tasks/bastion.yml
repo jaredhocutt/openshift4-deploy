@@ -28,11 +28,11 @@
   blockinfile:
     path: /etc/hosts
     block: |
-      {% for master in groups.masters %}
-      {{ hostvars[master].ip_address }}  master{{ loop.index0 }}
+      {% for controller in groups.controllers %}
+      {{ hostvars[controller].private_ip_address }}  controller{{ loop.index0 }}
       {% endfor %}
       {%- for worker in groups.workers %}
-      {{ hostvars[worker].ip_address }}  worker{{ loop.index0 }}
+      {{ hostvars[worker].private_ip_address }}  worker{{ loop.index0 }}
       {% endfor %}
   become: yes
 
@@ -48,9 +48,10 @@
       - bind-utils
       - git
       - httpd
+      - "{{ 'jq' if ansible_distribution_major_version == '8' else omit }}"
       - python3
       - python3-pip
-      - screen
+      - "{{ (ansible_distribution_major_version == '8') | ternary('tmux', 'screen') }}"
       - unzip
       - vim
       - wget

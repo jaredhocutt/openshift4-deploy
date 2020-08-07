@@ -1,26 +1,25 @@
 ---
 
-- name: Build infrastructure using Terraform
-  terraform:
-    project_path: "{{ role_path }}/terraform/aws"
-    force_init: yes
-    state: present
-    variables:
-      cluster_name: "{{ cluster_name }}"
-      base_domain: "{{ base_domain }}"
-      cluster_domain: "{{ cluster_domain }}"
-      cluster_id: "{{ cluster_id }}"
-      vpc_cidr: "{{ vpc_cidr | default(omit) }}"
-      rhcos_ami: "{{ rhcos_ami }}"
-      keypair_name: "{{ keypair_name }}"
-    workspace: "{{ terraform_workspace }}"
-  register: r_terraform_apply
+- import_tasks: aws/rhcos_ami_info.yml
+  when: rhcos_ami is undefined
 
-- import_tasks: aws_info.yml
+- import_tasks: aws/rhel_ami_info.yml
+  when: rhel_ami is undefined
 
-- name: Wait for bastion to boot
-  wait_for:
-    host: "{{ hostvars.bastion.ansible_host }}"
-    port: 22
-    search_regex: OpenSSH
-  delegate_to: localhost
+# TODO: add logic to check for all required variables if keypair_name is defined
+- import_tasks: aws/keypair.yml
+  when: keypair_name is undefined
+
+# TODO: add logic to check for all required veriables if vpc_id is defined
+- import_tasks: aws/vpc.yml
+  when: vpc_id is undefined
+
+- import_tasks: aws/security_groups.yml
+
+- import_tasks: aws/bastion.yml
+
+- import_tasks: aws/instances.yml
+
+- import_tasks: aws/load_balancers.yml
+
+- import_tasks: aws/route53.yml

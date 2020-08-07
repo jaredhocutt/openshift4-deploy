@@ -31,7 +31,7 @@
       args:
         chdir: "{{ openshift_install_dir }}"
 
-    - name: Mark masters as not scheduleable
+    - name: Mark controllers as not scheduleable
       lineinfile:
         path: "{{ openshift_install_dir }}/manifests/cluster-scheduler-02-config.yml"
         regexp: '^(\s*mastersSchedulable:)'
@@ -72,7 +72,10 @@
   delegate_to: localhost
   when: cloud in ['aws', 'aws_govcloud']
 
-- import_tasks: wait_for_worker_nodes.yml
+- name: Approve CSR requests from worker nodes (5 minute timeout)
+  script: "{{ role_path }}/files/csr_approve.sh {{ instance_count_worker }}"
+  environment:
+    KUBECONFIG: "{{ openshift_install_dir }}/auth/kubeconfig"
 
 - name: Wait for OpenShift installation to complete (this may take a while)
   command: openshift-install wait-for install-complete --log-level=debug

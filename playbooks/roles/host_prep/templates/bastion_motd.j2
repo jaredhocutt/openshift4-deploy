@@ -8,9 +8,9 @@
 
 Cluster Details:
 
-{% for master in groups.masters %}
-master{{ loop.index0 }}    {{ hostvars[master].ip_address }}
+{% for controller in groups.controllers %}
+controller{{ loop.index0 }}    {{ hostvars[controller].private_ip_address }}
 {% endfor %}
 {%- for worker in groups.workers %}
-worker{{ loop.index0 }}    {{ hostvars[worker].ip_address }}
+worker{{ loop.index0 }}    {{ hostvars[worker].private_ip_address }}
 {% endfor %}

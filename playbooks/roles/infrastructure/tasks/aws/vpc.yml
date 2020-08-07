@@ -1,0 +1,145 @@
+---
+
+- name: Capture availability zone info
+  aws_az_info: {}
+  register: r_az_info
+
+- name: Set availability zone names
+  set_fact:
+    availability_zone_names: "{{ r_az_info.availability_zones | map(attribute='zone_name') | list }}"
+
+- name: Capture DHCP option sets
+  ec2_vpc_dhcp_option_info:
+    filters:
+      tag:Name: "{{ cluster_id }}"
+      tag:OpenShiftCluster: "{{ cluster_domain }}"
+      tag:OpenShiftClusterId: "{{ cluster_id }}"
+  register: r_capture_dhcp_option_sets
+
+# Ansible STILL doesn't support AWS GovCloud becuase modules use the outdated
+# boto libraries
+- block:
+    - name: Create DHCP option set
+      command: >-
+        aws ec2 create-dhcp-options
+        --dhcp-configurations Key=domain-name-servers,Values=AmazonProvidedDNS
+        --tag-specifications ResourceType=dhcp-options,Tags="[{Key=Name,Value={{ cluster_id }}},{Key=OpenShiftCluster,Value={{ cluster_domain }}},{Key=OpenShiftClusterId,Value={{ cluster_id }}}]"
+        --output json
+      register: r_create_dhcp_option_set
+
+    - name: Set DHCP option set ID
+      set_fact:
+        dhcp_option_set_id: "{{ (r_create_dhcp_option_set.stdout | from_json).DhcpOptions.DhcpOptionsId }}"
+  when: (r_capture_dhcp_option_sets.dhcp_options | length) == 0
+
+- name: Create VPC
+  ec2_vpc_net:
+    name: "{{ cluster_id }}"
+    cidr_block: "{{ vpc_cidr }}"
+    dhcp_opts_id: "{{ dhcp_option_set_id | default(r_capture_dhcp_option_sets.dhcp_options.0.dhcp_options_id) }}"
+    dns_support: yes
+    dns_hostnames: yes
+    tenancy: default
+    tags:
+      Name: "{{ cluster_id }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+  register: r_create_vpc
+
+- name: Create Internet Gateway
+  ec2_vpc_igw:
+    vpc_id: "{{ r_create_vpc.vpc.id }}"
+    tags:
+      Name: "{{ cluster_id }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+  register: r_create_igw
+
+- name: Create public subnets
+  ec2_vpc_subnet:
+    vpc_id: "{{ r_create_vpc.vpc.id }}"
+    az: "{{ item }}"
+    cidr: "{{ vpc_cidr | ipsubnet(vpc_subnet_bits, idx) }}"
+    map_public: yes
+    tags:
+      Name: "{{ cluster_id }}-public-{{ item }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+  loop_control:
+    index_var: idx
+  loop: "{{ availability_zone_names }}"
+  register: r_create_public_subnets
+
+- name: Set public subnet IDs
+  set_fact:
+    public_subnet_ids: "{{ r_create_public_subnets.results | map(attribute='subnet.id') | list }}"
+
+- name: Create public route table
+  ec2_vpc_route_table:
+    vpc_id: "{{ r_create_vpc.vpc.id }}"
+    subnets: "{{ public_subnet_ids }}"
+    lookup: tag
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ r_create_igw.gateway_id }}"
+    tags:
+      Name: "{{ cluster_id }}-public"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+
+- name: Create NAT gateways
+  ec2_vpc_nat_gateway:
+    subnet_id: "{{ item }}"
+    if_exist_do_not_create: yes
+  loop: "{{ public_subnet_ids }}"
+  register: r_create_nat_gateways
+
+# The ec2_vpc_nat_gateway does not allow you to add tags during creation, so
+# let's tag things after the fact
+- name: Add NAT gateway tags
+  ec2_tag:
+    resource: "{{ item.0.nat_gateway_id }}"
+    tags:
+      Name: "{{ cluster_id }}-{{ item.1 }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+  loop: "{{ r_create_nat_gateways.results | zip(availability_zone_names) | list }}"
+
+- name: Create private subnets
+  ec2_vpc_subnet:
+    vpc_id: "{{ r_create_vpc.vpc.id }}"
+    az: "{{ item }}"
+    cidr: "{{ vpc_cidr | ipsubnet(vpc_subnet_bits, idx + (availability_zone_names | length)) }}"
+    map_public: no
+    tags:
+      Name: "{{ cluster_id }}-private-{{ item }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+  loop_control:
+    index_var: idx
+  loop: "{{ availability_zone_names }}"
+  register: r_create_private_subnets
+
+- name: Set private subnet IDs
+  set_fact:
+    private_subnet_ids: "{{ r_create_private_subnets.results | map(attribute='subnet.id') | list }}"
+
+- name: Create private route tables
+  ec2_vpc_route_table:
+    vpc_id: "{{ r_create_vpc.vpc.id }}"
+    subnets: "{{ item.2 }}"
+    lookup: tag
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ item.0.nat_gateway_id }}"
+    tags:
+      Name: "{{ cluster_id }}-private-{{ item.1 }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+  loop: "{{ r_create_nat_gateways.results | zip(availability_zone_names, private_subnet_ids) | list }}"
+
+# This must be set last, otherwise all tasks after will get skipped with this
+# set of tasks is imported
+- name: Set VPC ID
+  set_fact:
+    vpc_id: "{{ r_create_vpc.vpc.id }}"

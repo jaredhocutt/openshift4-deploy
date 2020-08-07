@@ -1,0 +1,189 @@
+---
+
+- name: Create external API target group
+  elb_target_group:
+    name: "{{ elb_target_group_name_api }}"
+    protocol: tcp
+    vpc_id: "{{ vpc_id }}"
+    port: 6443
+    stickiness_enabled: no
+    stickiness_type: source_ip
+    target_type: instance
+    targets:
+      - Id: "{{ hostvars.controller0.instance_id }}"
+        Port: 6443
+      - Id: "{{ hostvars.controller1.instance_id }}"
+        Port: 6443
+      - Id: "{{ hostvars.controller2.instance_id }}"
+        Port: 6443
+    tags:
+      Name: "{{ cluster_id }}-api"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    state: present
+  register: r_create_external_api_target_group
+
+- name: Create internal API target group
+  elb_target_group:
+    name: "{{ elb_target_group_name_api_int }}"
+    protocol: tcp
+    vpc_id: "{{ vpc_id }}"
+    port: 6443
+    stickiness_enabled: no
+    stickiness_type: source_ip
+    target_type: instance
+    targets:
+      - Id: "{{ hostvars.bootstrap.instance_id }}"
+        Port: 6443
+      - Id: "{{ hostvars.controller0.instance_id }}"
+        Port: 6443
+      - Id: "{{ hostvars.controller1.instance_id }}"
+        Port: 6443
+      - Id: "{{ hostvars.controller2.instance_id }}"
+        Port: 6443
+    tags:
+      Name: "{{ cluster_id }}-api-int"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    state: present
+  register: r_create_internal_api_target_group
+
+- name: Create machine config target group
+  elb_target_group:
+    name: "{{ elb_target_group_name_machine_config }}"
+    protocol: tcp
+    vpc_id: "{{ vpc_id }}"
+    port: 22623
+    stickiness_enabled: no
+    stickiness_type: source_ip
+    target_type: instance
+    targets:
+      - Id: "{{ hostvars.bootstrap.instance_id }}"
+        Port: 22623
+      - Id: "{{ hostvars.controller0.instance_id }}"
+        Port: 22623
+      - Id: "{{ hostvars.controller1.instance_id }}"
+        Port: 22623
+      - Id: "{{ hostvars.controller2.instance_id }}"
+        Port: 22623
+    tags:
+      Name: "{{ cluster_id }}-machine-config"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    state: present
+  register: r_create_machine_config_target_group
+
+- name: Create http target group
+  elb_target_group:
+    name: "{{ elb_target_group_name_http }}"
+    protocol: tcp
+    vpc_id: "{{ vpc_id }}"
+    port: 80
+    stickiness_enabled: no
+    stickiness_type: source_ip
+    target_type: instance
+    modify_targets: no
+    tags:
+      Name: "{{ cluster_id }}-http"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    state: present
+  register: r_create_http_target_group
+
+- name: Add targets to http target group
+  elb_target:
+    target_group_arn: "{{ r_create_http_target_group.target_group_arn }}"
+    target_id: "{{ item }}"
+    state: present
+  loop: "{{ groups.workers | map('extract', hostvars, 'instance_id') | list }}"
+
+- name: Create https target group
+  elb_target_group:
+    name: "{{ elb_target_group_name_https }}"
+    protocol: tcp
+    vpc_id: "{{ vpc_id }}"
+    port: 443
+    stickiness_enabled: no
+    stickiness_type: source_ip
+    target_type: instance
+    modify_targets: no
+    tags:
+      Name: "{{ cluster_id }}-https"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    state: present
+  register: r_create_https_target_group
+
+- name: Add targets to https target group
+  elb_target:
+    target_group_arn: "{{ r_create_https_target_group.target_group_arn }}"
+    target_id: "{{ item }}"
+    state: present
+  loop: "{{ groups.workers | map('extract', hostvars, 'instance_id') | list }}"
+
+- name: Create external API load balancer
+  elb_network_lb:
+    name: "{{ elb_name_api_ext }}"
+    scheme: internet-facing
+    subnets: "{{ public_subnet_ids }}"
+    listeners:
+      - Protocol: TCP
+        Port: 6443
+        DefaultActions:
+          - Type: forward
+            TargetGroupArn: "{{ r_create_external_api_target_group.target_group_arn }}"
+    tags:
+      Name: "{{ elb_name_api_ext }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    wait: yes
+    state: present
+  register: r_create_external_api_lb
+
+- name: Create internal API load balancer
+  elb_network_lb:
+    name: "{{ elb_name_api_int }}"
+    scheme: internal
+    subnets: "{{ private_subnet_ids }}"
+    listeners:
+      - Protocol: TCP
+        Port: 6443
+        DefaultActions:
+          - Type: forward
+            TargetGroupArn: "{{ r_create_internal_api_target_group.target_group_arn }}"
+      - Protocol: TCP
+        Port: 22623
+        DefaultActions:
+          - Type: forward
+            TargetGroupArn: "{{ r_create_machine_config_target_group.target_group_arn }}"
+    tags:
+      Name: "{{ elb_name_api_int }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    wait: yes
+    state: present
+  register: r_create_internal_api_lb
+
+- name: Create ingress load balancer
+  elb_network_lb:
+    name: "{{ elb_name_ingress }}"
+    scheme: internet-facing
+    subnets: "{{ public_subnet_ids }}"
+    listeners:
+      - Protocol: TCP
+        Port: 80
+        DefaultActions:
+          - Type: forward
+            TargetGroupArn: "{{ r_create_http_target_group.target_group_arn }}"
+      - Protocol: TCP
+        Port: 443
+        DefaultActions:
+          - Type: forward
+            TargetGroupArn: "{{ r_create_https_target_group.target_group_arn }}"
+    tags:
+      Name: "{{ elb_name_ingress }}"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+    wait: yes
+    state: present
+  register: r_create_ingress_lb

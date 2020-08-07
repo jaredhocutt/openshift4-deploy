@@ -1,0 +1,19 @@
+---
+
+- name: Create keypair
+  ec2_key:
+    name: "{{ cluster_id }}"
+    force: no
+    state: present
+  register: r_create_keypair
+
+- name: Write private key to disk
+  copy:
+    content: "{{ r_create_keypair.key.private_key }}"
+    dest: ~/.ssh/{{ cluster_id }}.pem
+    owner: "{{ ansible_user_uid | string }}"
+    group: "{{ ansible_user_gid | string }}"
+    mode: "0600"
+  when: r_create_keypair.changed
+
+- include_tasks: keypair_info.yml

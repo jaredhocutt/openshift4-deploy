@@ -1,0 +1,186 @@
+---
+
+- name: Create bastion security group
+  ec2_group:
+    name: "{{ cluster_id }}-bastion"
+    description: OpenShift bastion security group
+    vpc_id: "{{ vpc_id }}"
+    purge_rules: false
+    purge_rules_egress: false
+    purge_tags: false
+  register: r_create_bastion_sg
+
+- name: Create bootstrap security group
+  ec2_group:
+    name: "{{ cluster_id }}-bootstrap"
+    description: OpenShift bootstrap security group
+    vpc_id: "{{ vpc_id }}"
+    purge_rules: false
+    purge_rules_egress: false
+    purge_tags: false
+  register: r_create_bootstrap_sg
+
+- name: Create controller security group
+  ec2_group:
+    name: "{{ cluster_id }}-controller"
+    description: OpenShift controller security group
+    vpc_id: "{{ vpc_id }}"
+    purge_rules: false
+    purge_rules_egress: false
+    purge_tags: false
+  register: r_create_controller_sg
+
+- name: Create worker security group
+  ec2_group:
+    name: "{{ cluster_id }}-worker"
+    description: OpenShift worker security group
+    vpc_id: "{{ vpc_id }}"
+    purge_rules: false
+    purge_rules_egress: false
+    purge_tags: false
+  register: r_create_worker_sg
+
+- name: Add rules to bastion security group
+  ec2_group:
+    name: "{{ cluster_id }}-bastion"
+    description: OpenShift bastion security group
+    vpc_id: "{{ vpc_id }}"
+    rules:
+      - rule_desc: SSH
+        proto: tcp
+        ports: 22
+        cidr_ip: 0.0.0.0/0
+      - rule_desc: HTTP
+        proto: tcp
+        ports: 80
+        cidr_ip: "{{ vpc_cidr }}"
+    tags:
+      Name: "{{ cluster_id }}-bastion"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+
+- name: Add rules to the bootstrap security group
+  ec2_group:
+    name: "{{ cluster_id }}-bootstrap"
+    vpc_id: "{{ vpc_id }}"
+    description: OpenShift bootstrap security group
+    rules:
+      - rule_desc: SSH
+        proto: tcp
+        ports: 22
+        cidr_ip: 0.0.0.0/0
+      - rule_desc: Logging
+        proto: tcp
+        ports: 19531
+        cidr_ip: 0.0.0.0/0
+    tags:
+      Name: "{{ cluster_id }}-bootstrap"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+
+- name: Add rules to the controller security group
+  ec2_group:
+    name: "{{ cluster_id }}-controller"
+    vpc_id: "{{ vpc_id }}"
+    description: OpenShift controller security group
+    rules:
+      - rule_desc: ICMP
+        proto: icmp
+        ports: -1
+        cidr_ip: "{{ vpc_cidr }}"
+      - rule_desc: SSH
+        proto: tcp
+        ports: 22
+        cidr_ip: "{{ vpc_cidr }}"
+      - rule_desc: API
+        proto: tcp
+        ports: 6443
+        cidr_ip: 0.0.0.0/0
+      - rule_desc: Machine config
+        proto: tcp
+        ports: 22623
+        cidr_ip: "{{ vpc_cidr }}"
+      - rule_desc: etcd
+        proto: tcp
+        from_port: 2379
+        to_port: 2380
+        group_id: "{{ r_create_controller_sg.group_id}}"
+      - rule_desc: Vxlan packets
+        proto: udp
+        ports: 4789
+        group_id:
+          - "{{ r_create_controller_sg.group_id}}"
+          - "{{ r_create_worker_sg.group_id }}"
+      - rule_desc: Internal cluster communication
+        proto: tcp
+        ports: 9000-9999
+        group_id:
+          - "{{ r_create_controller_sg.group_id}}"
+          - "{{ r_create_worker_sg.group_id }}"
+      - rule_desc: Kubernetes kubelet, scheduler and controller manager
+        proto: tcp
+        ports: 10250-10259
+        group_id:
+          - "{{ r_create_controller_sg.group_id}}"
+          - "{{ r_create_worker_sg.group_id }}"
+      - rule_desc: Kubernetes ingress services
+        proto: tcp
+        ports: 30000-32767
+        group_id:
+          - "{{ r_create_controller_sg.group_id}}"
+          - "{{ r_create_worker_sg.group_id }}"
+    tags:
+      Name: "{{ cluster_id }}-controller"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
+
+- name: Add rules to the worker security group
+  ec2_group:
+    name: "{{ cluster_id }}-worker"
+    vpc_id: "{{ vpc_id }}"
+    description: OpenShift worker security group
+    rules:
+      - rule_desc: ICMP
+        proto: icmp
+        ports: -1
+        cidr_ip: "{{ vpc_cidr }}"
+      - rule_desc: SSH
+        proto: tcp
+        ports: 22
+        cidr_ip: "{{ vpc_cidr }}"
+      - rule_desc: HTTP
+        proto: tcp
+        ports: 80
+        cidr_ip: 0.0.0.0/0
+      - rule_desc: HTTPS
+        proto: tcp
+        ports: 443
+        cidr_ip: 0.0.0.0/0
+      - rule_desc: Vxlan packets
+        proto: udp
+        ports: 4789
+        group_id:
+          - "{{ r_create_controller_sg.group_id}}"
+          - "{{ r_create_worker_sg.group_id }}"
+      - rule_desc: Internal cluster communication
+        proto: tcp
+        ports: 9000-9999
+        group_id:
+          - "{{ r_create_controller_sg.group_id}}"
+          - "{{ r_create_worker_sg.group_id }}"
+      - rule_desc: Kubernetes secure kubelet port
+        proto: tcp
+        ports: 10250-10250
+        group_id:
+          - "{{ r_create_controller_sg.group_id}}"
+          - "{{ r_create_worker_sg.group_id }}"
+      - rule_desc: Kubernetes ingress services
+        proto: tcp
+        ports: 30000-32767
+        group_id:
+          - "{{ r_create_controller_sg.group_id}}"
+          - "{{ r_create_worker_sg.group_id }}"
+    tags:
+      Name: "{{ cluster_id }}-worker"
+      OpenShiftCluster: "{{ cluster_domain }}"
+      OpenShiftClusterId: "{{ cluster_id }}"
