@@ -28,6 +28,16 @@ Deploy OpenShift 4 on the following platforms:
 For documentation on how to use this repository for a given platform, click the
 links for the platform you want to use above.
 
+## Earlier Version
+
+If you used an earlier version of this repository and have a cluster deployed
+that used Terraform to create the infrastructure, a tag was created named
+`terraform` that points to the last commit that contains the Terraform
+artifacts. You will need to use this branch to destroy any clusters you have
+deployed that used Terraform. This branch will not be updated with any new
+code, but will be kept around to ensure that existing clusters can easily be
+destroyed if there were created with an earlier version of this repository.
+
 
 [1]: docs/install/aws_generic.md
 [2]: docs/install/aws_govcloud_generic.md
