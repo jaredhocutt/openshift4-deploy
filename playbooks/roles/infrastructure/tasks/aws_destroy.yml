@@ -261,4 +261,20 @@
           OpenShiftCluster: "{{ cluster_domain }}"
           OpenShiftClusterId: "{{ cluster_id }}"
         state: absent
+
+    - name: Capture DHCP option sets
+      ec2_vpc_dhcp_option_info:
+        filters:
+          tag:Name: "{{ cluster_id }}"
+          tag:OpenShiftCluster: "{{ cluster_domain }}"
+          tag:OpenShiftClusterId: "{{ cluster_id }}"
+      register: r_capture_dhcp_option_sets
+
+    # Ansible STILL doesn't support AWS GovCloud because the
+    # ec2_vpc_dhcp_option module uses the outdated boto libraries
+    - name: Delete DHCP option set
+      command: >-
+        aws ec2 delete-dhcp-options --dhcp-options-id {{ item.dhcp_options_id }}
+      when: r_capture_dhcp_option_sets.dhcp_options | length > 0
+      loop: "{{ r_capture_dhcp_option_sets.dhcp_options }}"
   when: destroy_vpc
