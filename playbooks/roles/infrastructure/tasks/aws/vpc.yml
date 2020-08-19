@@ -87,23 +87,26 @@
       OpenShiftCluster: "{{ cluster_domain }}"
       OpenShiftClusterId: "{{ cluster_id }}"
 
-- name: Create NAT gateways
-  ec2_vpc_nat_gateway:
-    subnet_id: "{{ item }}"
-    if_exist_do_not_create: yes
-  loop: "{{ public_subnet_ids }}"
-  register: r_create_nat_gateways
+- block:
+  - name: Create NAT gateways
+    ec2_vpc_nat_gateway:
+      subnet_id: "{{ item }}"
+      if_exist_do_not_create: yes
+    loop: "{{ public_subnet_ids }}"
+    register: r_create_nat_gateways
 
-# The ec2_vpc_nat_gateway does not allow you to add tags during creation, so
-# let's tag things after the fact
-- name: Add NAT gateway tags
-  ec2_tag:
-    resource: "{{ item.0.nat_gateway_id }}"
-    tags:
-      Name: "{{ cluster_id }}-{{ item.1 }}"
-      OpenShiftCluster: "{{ cluster_domain }}"
-      OpenShiftClusterId: "{{ cluster_id }}"
-  loop: "{{ r_create_nat_gateways.results | zip(availability_zone_names) | list }}"
+  # The ec2_vpc_nat_gateway doesn't allow you to add tags during creation, so
+  # let's tag things after the fact (even if not all of the NGWs were created)
+  always:
+  - name: Add NAT gateway tags
+    ec2_tag:
+      resource: "{{ item.0.nat_gateway_id }}"
+      tags:
+        Name: "{{ cluster_id }}-{{ item.1 }}"
+        OpenShiftCluster: "{{ cluster_domain }}"
+        OpenShiftClusterId: "{{ cluster_id }}"
+    loop: "{{ r_create_nat_gateways.results | zip(availability_zone_names) | list }}"
+    when: item.0.success
 
 - name: Create private subnets
   ec2_vpc_subnet:

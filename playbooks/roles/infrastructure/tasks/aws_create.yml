@@ -1,16 +1,16 @@
 ---
 
+- import_tasks: aws/verifications.yml
+
 - import_tasks: aws/rhcos_ami_info.yml
   when: rhcos_ami is undefined
 
 - import_tasks: aws/rhel_ami_info.yml
   when: rhel_ami is undefined
 
-# TODO: add logic to check for all required variables if keypair_name is defined
 - import_tasks: aws/keypair.yml
   when: keypair_name is undefined
 
-# TODO: add logic to check for all required veriables if vpc_id is defined
 - import_tasks: aws/vpc.yml
   when: vpc_id is undefined
 

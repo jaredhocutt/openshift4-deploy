@@ -3,11 +3,11 @@
 This repository contains a set of tools and automation for deploying OpenShift
 4 in various environments.
 
-It is primarily focused on depolyments in situations that would require using
+It is primarily focused on deployments in situations that would require using
 the User-Provisioned Infrastructure (UPI) method to perform the installation.
 This includes environments where you are unable to provide administrator access
 to the installer, are deploying in an air-gapped environment, do not wish to
-have OpenShift 4 integreate with the cloud provider APIs, etc.
+have OpenShift 4 integrate with the cloud provider APIs, etc.
 
 > If you are deploying in an environment where there already exists an
 > Installer-Provisioned Infrastructure (IPI) method of installation and your
@@ -32,7 +32,7 @@ links for the platform you want to use above.
 
 If you used an earlier version of this repository and have a cluster deployed
 that used Terraform to create the infrastructure, a tag was created named
-`terraform` that points to the last commit that contains the Terraform
+[`terraform`][3] that points to the last commit that contains the Terraform
 artifacts. You will need to use this branch to destroy any clusters you have
 deployed that used Terraform. This branch will not be updated with any new
 code, but will be kept around to ensure that existing clusters can easily be
@@ -41,3 +41,4 @@ destroyed if there were created with an earlier version of this repository.
 
 [1]: docs/install/aws_generic.md
 [2]: docs/install/aws_govcloud_generic.md
+[3]: https://github.com/jaredhocutt/openshift4-deploy/releases/tag/terraform

@@ -1,0 +1,101 @@
+---
+
+# If vpc_id is given, public_subnet_ids and private_subnet_ids are required
+- block:
+  - name: Check if the user-defined vpc_id exists
+    ec2_vpc_net_info:
+      vpc_ids: "{{ vpc_id }}"
+  
+  - name: Fail when subnet_ids are undefined
+    fail:
+      msg: |
+        ERROR: When vpc_id is provided a list of public and private subnet_ids
+        must also be provided.  For example:
+          public_subnet_ids:
+            - subnet-0123456789abcdef0
+          private_subnet_ids:
+            - subnet-1234567890abcdef1
+            - subnet-234567890abcdef12
+            - subnet-34567890abcdef123
+    when: (public_subnet_ids is undefined) or (private_subnet_ids is undefined)
+
+  # TODO: Figure out how to make this task faster
+  #       This task will takes ~7 minutes if a non-existent subnet_id is given
+  - name: Check if the user-defined subnets exist
+    ec2_vpc_subnet_info:
+      subnet_ids: "{{ public_subnet_ids + private_subnet_ids }}"
+    register: r_verify_subnet_ids
+
+  - name: Fail when all subnet_ids are not found
+    fail:
+      msg: |
+        ERROR: Unable to find all user-defined subnets.  Please make sure
+        all of these subnet_ids exist.
+          public_subnet_ids: "{{ public_subnet_ids }}"
+          private_subnet_ids: "{{ private_subnet_ids }}"
+    when: r_verify_subnet_ids.subnets | length != public_subnet_ids | length + private_subnet_ids | length
+  when: vpc_id is defined
+
+
+# If rhcos_ami or rhel_ami is given, check that they exist in the region
+- name: Check if the RHCOS AMI exists
+  ec2_ami_info:
+    image_ids: "{{ rhcos_ami }}"
+  when: rhcos_ami is defined
+
+- name: Check if the RHEL AMI exists
+  ec2_ami_info:
+    image_ids: "{{ rhel_ami }}"
+  when: rhel_ami is defined
+  
+
+# If keypair_path is given, check that it exists
+- block:
+  - name: Check if bastion's keypair exists locally
+    stat:
+      path: "{{ keypair_path }}"
+    register: r_keypair_path
+
+  - name: Fail when bastion's private key is unavailable
+    fail:
+      msg: |
+        ERROR: A private key (keypair_path) was defined, but not found.  Please
+        make sure that "{{ keypair_path }}" is available, or leave it undefined
+        so that a new keypair can be auto-generated.
+    when: r_keypair_path.stat.exists is false
+  when: keypair_path is defined
+
+
+# If route53_hosted_zone_id is given, check that it exists
+- name: Check if the user-provided Route53 Hosted Zone exists
+  route53_info:
+    hosted_zone_id: "{{ route53_hosted_zone_id }}"
+    hosted_zone_method: details
+    query: hosted_zone
+  when: route53_hosted_zone_id is defined
+
+# If route53_hosted_zone_id is not given AND cloud == "aws"
+#   check that the default-named public Route53 Hosted Zone exists
+- block:
+  - name: Get Route53 Hosted Zone list
+    route53_info:
+      query: hosted_zone
+      max_items: "500"
+    register: r_route53_hosted_zones
+    failed_when: r_route53_hosted_zones.IsTruncated is true  #Too many items to list
+
+  - name: Fail when the default Route53 Hosted Zone (public) can't be found
+    fail:
+      msg: |
+        ERROR:  Unable to find public Route53 Hosted Zone named "{{ route53_hosted_zone_name }}"
+        Please complete the prequisite steps in README.md and try again.
+    when:  r_route53_hosted_zones.HostedZones |
+             selectattr('Name', 'match', route53_hosted_zone_name) |
+             selectattr('Config.PrivateZone', 'match', 'False') |
+             list |
+             length != 1
+  when:
+    - cloud == "aws"
+    - route53_hosted_zone_id is undefined
+
+- debug: msg="All verification checks succeeded!"
