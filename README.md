@@ -1,3 +1,7 @@
+
+| ❗ | This repository is no longer being maintained in this location. You can find the most recent updates at https://github.com/RedHatGov/openshift4-deploy |
+|----|:---|
+
 # OpenShift 4 Deploy
 
 This repository contains a set of tools and automation for deploying OpenShift
